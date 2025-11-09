@@ -1,6 +1,6 @@
 export function getNumberFreqs(n: number) {
   const freqs: number[] = [];
-  for (let i = 1; i < 1024; i *= 2) {
+  for (let i = 1; i <= 1024; i *= 2) {
     if ((n & i) !== 0) {
       freqs.push(21000 - Math.log2(i) * 200);
     }
