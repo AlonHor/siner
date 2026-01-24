@@ -58,7 +58,7 @@ export function useSineWavePlayer(config?: PlayerConfig) {
 
   return {
     isPlaying,
-    playTone, // exposed on purpose
+    playTone,
     stop,
   };
 }
@@ -93,6 +93,9 @@ function generatePolyphonicWav(
   writeStr(view, 36, "data");
   view.setUint32(40, dataSize, true);
 
+  const fadeTime = 0.005;
+  const fadeSamples = Math.floor(sampleRate * fadeTime);
+
   let offset = headerSize;
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
@@ -103,7 +106,16 @@ function generatePolyphonicWav(
     }
 
     sample /= freqs.length; // avoid clipping
-    const amp = Math.floor(sample * 0x7fff * 0.9);
+
+    // fade to avoid ticks
+    let env = 1;
+    if (i < fadeSamples) {
+      env = i / fadeSamples;
+    } else if (i > numSamples - fadeSamples) {
+      env = (numSamples - i) / fadeSamples;
+    }
+
+    const amp = Math.floor(sample * env * 0x7fff * 0.9);
     view.setInt16(offset, amp, true);
     offset += 2;
   }

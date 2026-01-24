@@ -36,8 +36,7 @@ export function useUltrasonicFrequency(config?: ListenerConfig) {
       sub.remove();
       Ultrasonic.stop();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [carrierFreq, sampleRate]);
 
   return freq;
 }

@@ -17,7 +17,7 @@
     "@react-navigation/native": "^7.1.8",
     "expo": "~54.0.23",
     "expo-audio": "^1.1.1",
-    "expo-av": "~16.0.7",
+    "expo-av": "^16.0.8",
     "expo-constants": "~18.0.10",
     "expo-file-system": "~19.0.17",
     "expo-font": "~14.0.9",
@@ -47,6 +47,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
+    "baseline-browser-mapping": "^2.9.18",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"

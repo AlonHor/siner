@@ -1,4 +1,4 @@
-export const PLAY_INTERVAL = 300;
+export const PLAY_INTERVAL = 500;
 export const END_OF_NUMBER_FREQUENCY = 21_400;
 export const START_OF_SEQUENCE_FREQUENCY = 21_600;
 export const END_OF_SEQUENCE_FREQUENCY = 21_800;

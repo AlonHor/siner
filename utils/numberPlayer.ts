@@ -27,7 +27,6 @@ export function freqsToNumber(buffer: number[]): number {
     )
       continue;
     const bit = Math.pow(2, (NUMBERS_TOP_FREQUENCY - frequency) / 200);
-    console.log(bit);
     number += bit;
   }
 
@@ -57,8 +56,6 @@ export async function playNumbers(playTone: Function, numbers: number[]) {
     sequence.push(END_OF_NUMBER_FREQUENCY);
   }
   sequence.push(END_OF_SEQUENCE_FREQUENCY);
-
-  console.log(`playing sequence: ${sequence}`);
 
   for (const tone of sequence) {
     playTone(tone, PLAY_INTERVAL / 1000);
