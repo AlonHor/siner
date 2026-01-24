@@ -11,7 +11,6 @@ class UltrasonicModule(
 ) : ReactContextBaseJavaModule(reactContext) {
 
   companion object {
-    const val SAMPLE_RATE = 48000
     const val FFT_SIZE = 2048
     const val MIN_FREQ = 15000.0
     const val MAX_FREQ = 22000.0
@@ -27,21 +26,27 @@ class UltrasonicModule(
   private var recordingThread: Thread? = null
   private var running = false
 
+  private var sampleRate: Int = 48000
+  private var carrierFreq: Double = 18800.0
+
   override fun getName() = "Ultrasonic"
 
   @ReactMethod
-  fun start() {
+  fun start(sampleRate: Int, carrierFreq: Double) {
     if (running) return
 
+    this.sampleRate = sampleRate
+    this.carrierFreq = carrierFreq
+
     val minBuf = AudioRecord.getMinBufferSize(
-      SAMPLE_RATE,
+      sampleRate,
       AudioFormat.CHANNEL_IN_MONO,
       AudioFormat.ENCODING_PCM_16BIT
     )
 
     audioRecord = AudioRecord(
       MediaRecorder.AudioSource.UNPROCESSED,
-      SAMPLE_RATE,
+      sampleRate,
       AudioFormat.CHANNEL_IN_MONO,
       AudioFormat.ENCODING_PCM_16BIT,
       minBuf * 2
@@ -85,7 +90,7 @@ class UltrasonicModule(
     var m2 = 0.0
 
     for (i in 1 until FFT_SIZE / 2) {
-      val freq = i * SAMPLE_RATE.toDouble() / FFT_SIZE
+      val freq = i * sampleRate.toDouble() / FFT_SIZE
       if (freq < MIN_FREQ || freq > MAX_FREQ) continue
 
       val re = fftBuffer[2*i]
@@ -114,13 +119,13 @@ class UltrasonicModule(
       val f2 = binToFreq(b2)
       val lf = minOf(f1, f2)
       val nf = maxOf(f1, f2)
-      val corrected = nf / (lf / 19000.0)
+      val corrected = nf / (lf / carrierFreq)
       emit(corrected)
     }
   }
 
   private fun binToFreq(b: Int) =
-    b * SAMPLE_RATE.toDouble() / FFT_SIZE
+    b * sampleRate.toDouble() / FFT_SIZE
 
   private fun emit(f: Double) {
     reactContext

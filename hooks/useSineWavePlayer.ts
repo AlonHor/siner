@@ -1,51 +1,50 @@
-import { Buffer } from "buffer";
+import { CARRIER_FREQUENCY, SAMPLE_RATE } from "@/utils/config";
 import { Audio } from "expo-av";
 import { useCallback, useRef, useState } from "react";
 
-export type ToneStep = number[]; // array of frequencies to play together
+export type ToneStep = number[];
 
-export function useSineWavePlayer() {
+type PlayerConfig = {
+  sampleRate?: number;
+  carrierFreq?: number | null; // null = disable carrier
+};
+
+export function useSineWavePlayer(config?: PlayerConfig) {
+  const { sampleRate = SAMPLE_RATE, carrierFreq = CARRIER_FREQUENCY } =
+    config ?? {};
+
   const [isPlaying, setIsPlaying] = useState(false);
   const currentSound = useRef<Audio.Sound | null>(null);
 
   /**
-   * Play a sequence of steps. Each step is an array of frequencies played together.
-   * @param sequence Array of steps, e.g. [[19600, 20000], [19200, 19800]]
-   * @param stepDuration Duration in seconds for each step
+   * Plays a single tone (plus carrier if enabled) for a fixed duration.
    */
-  const playSequence = useCallback(
-    async (sequence: ToneStep[], stepDuration: number) => {
-      if (isPlaying) return;
-      setIsPlaying(true);
+  const playTone = useCallback(
+    async (freq: number, duration: number) => {
+      // merge carrier + requested freqs
+      const finalFreqs = carrierFreq != null ? [freq, carrierFreq] : [freq];
 
-      try {
-        for (const freqs of sequence) {
-          // generate WAV with summed frequencies
-          const base64 = generatePolyphonicWav(freqs, stepDuration, 48000);
-          const { sound } = await Audio.Sound.createAsync({
-            uri: "data:audio/wav;base64," + base64,
-          });
+      const base64 = generatePolyphonicWav(finalFreqs, duration, sampleRate);
 
-          currentSound.current = sound;
-          await sound.playAsync();
+      const { sound } = await Audio.Sound.createAsync({
+        uri: "data:audio/wav;base64," + base64,
+      });
 
-          await new Promise<void>((resolve) => {
-            sound.setOnPlaybackStatusUpdate((status) => {
-              if ("didJustFinish" in status && status.didJustFinish) {
-                sound.unloadAsync();
-                resolve();
-              }
-            });
-          });
-        }
-      } catch (e) {
-        console.error("Playback error:", e);
-      } finally {
-        currentSound.current = null;
-        setIsPlaying(false);
-      }
+      currentSound.current = sound;
+      await sound.playAsync();
+
+      await new Promise<void>((resolve) => {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if ("didJustFinish" in status && status.didJustFinish) {
+            sound.unloadAsync();
+            resolve();
+          }
+        });
+      });
+
+      currentSound.current = null;
     },
-    [isPlaying]
+    [carrierFreq, sampleRate],
   );
 
   const stop = useCallback(async () => {
@@ -57,16 +56,17 @@ export function useSineWavePlayer() {
     setIsPlaying(false);
   }, []);
 
-  return { isPlaying, playSequence, stop };
+  return {
+    isPlaying,
+    playTone, // exposed on purpose
+    stop,
+  };
 }
 
-/**
- * Generate a WAV base64 string that sums multiple sine waves
- */
 function generatePolyphonicWav(
   freqs: number[],
   duration: number,
-  sampleRate: number
+  sampleRate: number,
 ): string {
   const numChannels = 1;
   const bitsPerSample = 16;
@@ -97,19 +97,34 @@ function generatePolyphonicWav(
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
     let sample = 0;
+
     for (const f of freqs) {
       sample += Math.sin(2 * Math.PI * f * t);
     }
-    sample /= freqs.length; // prevent clipping by averaging
+
+    sample /= freqs.length; // avoid clipping
     const amp = Math.floor(sample * 0x7fff * 0.9);
     view.setInt16(offset, amp, true);
     offset += 2;
   }
 
-  return Buffer.from(new Uint8Array(buffer)).toString("base64");
+  return uint8ToBase64(new Uint8Array(buffer));
 }
 
 function writeStr(view: DataView, offset: number, str: string) {
-  for (let i = 0; i < str.length; i++)
+  for (let i = 0; i < str.length; i++) {
     view.setUint8(offset + i, str.charCodeAt(i));
+  }
+}
+
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000; // prevent call stack overflow
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return globalThis.btoa(binary);
 }

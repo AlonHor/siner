@@ -1,0 +1,10 @@
+export const PLAY_INTERVAL = 200;
+export const END_OF_NUMBER_FREQUENCY = 21_400;
+export const START_OF_SEQUENCE_FREQUENCY = 21_600;
+export const END_OF_SEQUENCE_FREQUENCY = 21_800;
+
+export const NUMBERS_TOP_FREQUENCY = 21_000;
+export const NUMBERS_BOTTOM_FREQUENCY = 19_000;
+
+export const CARRIER_FREQUENCY = 18_800;
+export const SAMPLE_RATE = 48_000;

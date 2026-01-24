@@ -1,22 +1,56 @@
-import { useFrequencyListener } from "@/hooks/useFrequencyListener";
+import { useUltrasonicFrequency } from "@/hooks/useFrequencyListener";
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
-import { playNumbers } from "@/utils/numberPlayer";
-import React, { useState } from "react";
+import {
+  CARRIER_FREQUENCY,
+  END_OF_NUMBER_FREQUENCY,
+  END_OF_SEQUENCE_FREQUENCY,
+  PLAY_INTERVAL,
+  SAMPLE_RATE,
+  START_OF_SEQUENCE_FREQUENCY,
+} from "@/utils/config";
+import { freqsToNumber, playNumbers } from "@/utils/numberPlayer";
+import React, { useEffect, useRef, useState } from "react";
 import { Button, Text, View } from "react-native";
 
 export default function Index() {
-  const { playSequence } = useSineWavePlayer();
-  const [currentRF, setCurrentRF] = useState<number>(0);
+  const { playTone } = useSineWavePlayer({
+    carrierFreq: CARRIER_FREQUENCY,
+    sampleRate: SAMPLE_RATE,
+  });
 
-  const { listenFrequencies } = useFrequencyListener();
+  const freq = useUltrasonicFrequency({
+    carrierFreq: CARRIER_FREQUENCY,
+    sampleRate: SAMPLE_RATE,
+  });
+
+  const [lastFrequencyChange, setLastFrequencyChange] = useState(Date.now());
+  const [lastFrequency, setLastFrequency] = useState(-1);
+
+  const [buffer, setBuffer] = useState<number[]>([]);
+  const [numbers, setNumbers] = useState<number[]>([]);
+
+  let isMidSequence = useRef(false);
+
+  useEffect(() => {
+    if (Date.now() - PLAY_INTERVAL * 0.6 > lastFrequencyChange) {
+      if (lastFrequency === END_OF_SEQUENCE_FREQUENCY)
+        isMidSequence.current = false;
+      else if (lastFrequency === START_OF_SEQUENCE_FREQUENCY) {
+        setNumbers([]);
+        isMidSequence.current = true;
+      } else if (lastFrequency === END_OF_NUMBER_FREQUENCY) {
+        setNumbers((n) => [...n, freqsToNumber(buffer)]);
+        setBuffer([]);
+      }
+      if (isMidSequence.current) setBuffer((b) => [...b, lastFrequency]);
+    }
+    setLastFrequencyChange(Date.now());
+    setLastFrequency(freq ?? -1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freq]);
 
   function playSomeNumbers() {
-    playNumbers(playSequence, [260, 260, 508, 508, 248, 903, 903]);
-  }
-
-  async function listenForNumbers() {
-    const rf = await listenFrequencies()
-    setCurrentRF(rf);
+    playNumbers(playTone, [260, 260, 508, 508, 248, 903, 903]);
   }
 
   return (
@@ -27,9 +61,12 @@ export default function Index() {
         alignItems: "center",
       }}
     >
-      <Text>RF: {currentRF}</Text>
+      <Text>Live Frequency: {freq}</Text>
+      <Text>
+        {"\n"}Numbers: {"\n[" + numbers.toString() + "]\n"}
+      </Text>
+      <Text>Buffer: {"\n[" + buffer.toString() + "]\n"}</Text>
       <Button onPress={playSomeNumbers} title="Start Playing" />
-      <Button onPress={listenForNumbers} title="Start Listening" />
     </View>
   );
 }
