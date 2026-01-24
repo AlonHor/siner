@@ -4,6 +4,8 @@ import {
   CARRIER_FREQUENCY,
   END_OF_NUMBER_FREQUENCY,
   END_OF_SEQUENCE_FREQUENCY,
+  NUMBERS_BOTTOM_FREQUENCY,
+  NUMBERS_TOP_FREQUENCY,
   PLAY_INTERVAL,
   SAMPLE_RATE,
   START_OF_SEQUENCE_FREQUENCY,
@@ -23,6 +25,7 @@ export default function Index() {
   const freq = useUltrasonicFrequency({
     carrierFreq: CARRIER_FREQUENCY,
     sampleRate: SAMPLE_RATE,
+    gap: (NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10,
   });
 
   const [lastFrequencyChange, setLastFrequencyChange] = useState(Date.now());
@@ -66,7 +69,8 @@ export default function Index() {
     <View
       style={{
         flex: 1,
-        justifyContent: "center",
+        marginTop: 60,
+        justifyContent: "flex-start",
         alignItems: "center",
       }}
     >
@@ -77,10 +81,10 @@ export default function Index() {
           margin: 10,
           padding: 10,
           borderWidth: 1,
-          backgroundColor: "black",
+          backgroundColor: "#222",
           color: "white",
+          borderRadius: 10,
         }}
-        placeholder="Message"
         onChangeText={(text) => setTextInput(text)}
       />
       <Button onPress={sendMessage} title="Send" />

@@ -11,7 +11,11 @@ export function numberToFreqs(n: number) {
   const freqs: number[] = [];
   for (let bit = 1; bit <= 1024; bit *= 2) {
     if ((n & bit) !== 0) {
-      freqs.push(21_000 - Math.log2(bit) * 200);
+      freqs.push(
+        NUMBERS_TOP_FREQUENCY -
+          Math.log2(bit) *
+            ((NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10),
+      );
     }
   }
 
@@ -26,7 +30,11 @@ export function freqsToNumber(buffer: number[]): number {
       frequency < NUMBERS_BOTTOM_FREQUENCY
     )
       continue;
-    const bit = Math.pow(2, (NUMBERS_TOP_FREQUENCY - frequency) / 200);
+    const bit = Math.pow(
+      2,
+      (NUMBERS_TOP_FREQUENCY - frequency) /
+        ((NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10),
+    );
     number += bit;
   }
 

@@ -1,4 +1,9 @@
-import { CARRIER_FREQUENCY, SAMPLE_RATE } from "@/utils/config";
+import {
+  CARRIER_FREQUENCY,
+  NUMBERS_BOTTOM_FREQUENCY,
+  NUMBERS_TOP_FREQUENCY,
+  SAMPLE_RATE,
+} from "@/utils/config";
 import { useEffect, useState } from "react";
 import {
   DeviceEventEmitter,
@@ -11,11 +16,15 @@ const { Ultrasonic } = NativeModules;
 type ListenerConfig = {
   sampleRate?: number;
   carrierFreq?: number | null; // null = disable carrier
+  gap?: number;
 };
 
 export function useUltrasonicFrequency(config?: ListenerConfig) {
-  const { sampleRate = SAMPLE_RATE, carrierFreq = CARRIER_FREQUENCY } =
-    config ?? {};
+  const {
+    sampleRate = SAMPLE_RATE,
+    carrierFreq = CARRIER_FREQUENCY,
+    gap = (NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10,
+  } = config ?? {};
 
   const [freq, setFreq] = useState<number | null>(null);
 
@@ -29,14 +38,14 @@ export function useUltrasonicFrequency(config?: ListenerConfig) {
 
     const sub = DeviceEventEmitter.addListener(
       "ultrasonicFrequency",
-      (f: number) => setFreq(Math.round(f / 200) * 200),
+      (f: number) => setFreq(Math.round(f / gap) * gap),
     );
 
     return () => {
       sub.remove();
       Ultrasonic.stop();
     };
-  }, [carrierFreq, sampleRate]);
+  }, [carrierFreq, sampleRate, gap]);
 
   return freq;
 }
