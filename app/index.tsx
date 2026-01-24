@@ -1,5 +1,5 @@
-import { useUltrasonicFrequency } from "@/hooks/useFrequencyListener";
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
+import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
 import {
   CARRIER_FREQUENCY,
   END_OF_NUMBER_FREQUENCY,
