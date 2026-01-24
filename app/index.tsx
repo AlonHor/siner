@@ -62,10 +62,10 @@ export default function Index() {
       }}
     >
       <Text>Live Frequency: {freq}</Text>
-      <Text>
-        {"\n"}Numbers: {"\n[" + numbers.toString() + "]\n"}
-      </Text>
-      <Text>Buffer: {"\n[" + buffer.toString() + "]\n"}</Text>
+      <Text>{"\n"}Numbers:</Text>
+      <Text>{"[" + numbers.toString() + "]\n"}</Text>
+      <Text>Buffer:</Text>
+      <Text>{"[" + buffer.toString() + "]\n"}</Text>
       <Button onPress={playSomeNumbers} title="Start Playing" />
     </View>
   );
