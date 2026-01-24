@@ -1,13 +1,9 @@
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
 import {
-  CARRIER_FREQUENCY,
   END_OF_NUMBER_FREQUENCY,
   END_OF_SEQUENCE_FREQUENCY,
-  NUMBERS_BOTTOM_FREQUENCY,
-  NUMBERS_TOP_FREQUENCY,
   PLAY_INTERVAL,
-  SAMPLE_RATE,
   START_OF_SEQUENCE_FREQUENCY,
 } from "@/utils/config";
 import { freqsToNumber, playNumbers } from "@/utils/numberPlayer";
@@ -17,16 +13,8 @@ import { Button, LogBox, Text, TextInput, View } from "react-native";
 LogBox.ignoreLogs(["Open debugger to view warnings."]);
 
 export default function Index() {
-  const { playTone } = useSineWavePlayer({
-    carrierFreq: CARRIER_FREQUENCY,
-    sampleRate: SAMPLE_RATE,
-  });
-
-  const freq = useUltrasonicFrequency({
-    carrierFreq: CARRIER_FREQUENCY,
-    sampleRate: SAMPLE_RATE,
-    gap: (NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10,
-  });
+  const { playTone } = useSineWavePlayer();
+  const freq = useUltrasonicFrequency();
 
   const [lastFrequencyChange, setLastFrequencyChange] = useState(Date.now());
   const [lastFrequency, setLastFrequency] = useState(-1);

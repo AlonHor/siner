@@ -12,8 +12,6 @@ class UltrasonicModule(
 
   companion object {
     const val FFT_SIZE = 2048
-    const val MIN_FREQ = 15000.0
-    const val MAX_FREQ = 22000.0
   }
 
   private val fft = DoubleFFT_1D(FFT_SIZE.toLong())
@@ -29,14 +27,20 @@ class UltrasonicModule(
   private var sampleRate: Int = 48000
   private var carrierFreq: Double = 18800.0
 
+  private var minFreq: Double = 15000.0
+  private var maxFreq: Double = 22000.0
+
   override fun getName() = "Ultrasonic"
 
   @ReactMethod
-  fun start(sampleRate: Int, carrierFreq: Double) {
+  fun start(sampleRate: Int, carrierFreq: Double, minFreq: Double, maxFreq: Double) {
     if (running) return
 
     this.sampleRate = sampleRate
     this.carrierFreq = carrierFreq
+
+    this.minFreq = minFreq
+    this.maxFreq = maxFreq
 
     val minBuf = AudioRecord.getMinBufferSize(
       sampleRate,
@@ -91,7 +95,7 @@ class UltrasonicModule(
 
     for (i in 1 until FFT_SIZE / 2) {
       val freq = i * sampleRate.toDouble() / FFT_SIZE
-      if (freq < MIN_FREQ || freq > MAX_FREQ) continue
+      if (freq < minFreq || freq > maxFreq) continue
 
       val re = fftBuffer[2*i]
       val im = fftBuffer[2*i + 1]

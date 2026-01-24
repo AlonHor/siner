@@ -4,48 +4,38 @@ import { useCallback, useRef, useState } from "react";
 
 export type ToneStep = number[];
 
-type PlayerConfig = {
-  sampleRate?: number;
-  carrierFreq?: number | null; // null = disable carrier
-};
-
-export function useSineWavePlayer(config?: PlayerConfig) {
-  const { sampleRate = SAMPLE_RATE, carrierFreq = CARRIER_FREQUENCY } =
-    config ?? {};
-
+export function useSineWavePlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const currentSound = useRef<Audio.Sound | null>(null);
 
   /**
    * Plays a single tone (plus carrier if enabled) for a fixed duration.
    */
-  const playTone = useCallback(
-    async (freq: number, duration: number) => {
-      // merge carrier + requested freqs
-      const finalFreqs = carrierFreq != null ? [freq, carrierFreq] : [freq];
+  const playTone = useCallback(async (freq: number, duration: number) => {
+    // merge carrier + requested freqs
+    const finalFreqs =
+      CARRIER_FREQUENCY != null ? [freq, CARRIER_FREQUENCY] : [freq];
 
-      const base64 = generatePolyphonicWav(finalFreqs, duration, sampleRate);
+    const base64 = generatePolyphonicWav(finalFreqs, duration, SAMPLE_RATE);
 
-      const { sound } = await Audio.Sound.createAsync({
-        uri: "data:audio/wav;base64," + base64,
+    const { sound } = await Audio.Sound.createAsync({
+      uri: "data:audio/wav;base64," + base64,
+    });
+
+    currentSound.current = sound;
+    await sound.playAsync();
+
+    await new Promise<void>((resolve) => {
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if ("didJustFinish" in status && status.didJustFinish) {
+          sound.unloadAsync();
+          resolve();
+        }
       });
+    });
 
-      currentSound.current = sound;
-      await sound.playAsync();
-
-      await new Promise<void>((resolve) => {
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if ("didJustFinish" in status && status.didJustFinish) {
-            sound.unloadAsync();
-            resolve();
-          }
-        });
-      });
-
-      currentSound.current = null;
-    },
-    [carrierFreq, sampleRate],
-  );
+    currentSound.current = null;
+  }, []);
 
   const stop = useCallback(async () => {
     if (currentSound.current) {

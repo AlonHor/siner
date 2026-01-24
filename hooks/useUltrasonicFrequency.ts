@@ -1,5 +1,7 @@
 import {
   CARRIER_FREQUENCY,
+  MAX_FREQ,
+  MIN_FREQ,
   NUMBERS_BOTTOM_FREQUENCY,
   NUMBERS_TOP_FREQUENCY,
   SAMPLE_RATE,
@@ -13,19 +15,9 @@ import {
 
 const { Ultrasonic } = NativeModules;
 
-type ListenerConfig = {
-  sampleRate?: number;
-  carrierFreq?: number | null; // null = disable carrier
-  gap?: number;
-};
+const GAP = (NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10;
 
-export function useUltrasonicFrequency(config?: ListenerConfig) {
-  const {
-    sampleRate = SAMPLE_RATE,
-    carrierFreq = CARRIER_FREQUENCY,
-    gap = (NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10,
-  } = config ?? {};
-
+export function useUltrasonicFrequency() {
   const [freq, setFreq] = useState<number | null>(null);
 
   useEffect(() => {
@@ -33,19 +25,19 @@ export function useUltrasonicFrequency(config?: ListenerConfig) {
       await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
       );
-      Ultrasonic.start(sampleRate, carrierFreq);
+      Ultrasonic.start(SAMPLE_RATE, CARRIER_FREQUENCY, MIN_FREQ, MAX_FREQ);
     })();
 
     const sub = DeviceEventEmitter.addListener(
       "ultrasonicFrequency",
-      (f: number) => setFreq(Math.round(f / gap) * gap),
+      (f: number) => setFreq(Math.round(f / GAP) * GAP),
     );
 
     return () => {
       sub.remove();
       Ultrasonic.stop();
     };
-  }, [carrierFreq, sampleRate, gap]);
+  }, []);
 
   return freq;
 }
