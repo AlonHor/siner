@@ -43,16 +43,16 @@ export function freqsToNumber(buffer: number[]): number {
 
 /* bit representations
   19000 // 1024
-  19200 // 512
-  19400 // 256
-  19600 // 128
-  19800 // 64
-  20000 // 32
-  20200 // 16
-  20400 // 8
-  20600 // 4
-  20800 // 2
-  21000 // 1
+  19100 // 512
+  19200 // 256
+  19300 // 128
+  19400 // 64
+  19500 // 32
+  19600 // 16
+  l9700 // 8
+  19800 // 4
+  19900 // 2
+  20000 // 1
 */
 
 export async function playNumbers(playTone: Function, numbers: number[]) {
