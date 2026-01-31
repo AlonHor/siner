@@ -1,28 +1,27 @@
+import { RefObject } from "react";
 import {
   END_OF_NUMBER_FREQUENCY,
   END_OF_SEQUENCE_FREQUENCY,
+  FREQUENCY_GAP,
   NUMBERS_BOTTOM_FREQUENCY,
   NUMBERS_TOP_FREQUENCY,
   PLAY_INTERVAL,
   START_OF_SEQUENCE_FREQUENCY,
+  TOTAL_BITS,
 } from "./config";
 
 export function numberToFreqs(n: number) {
   const freqs: number[] = [];
-  for (let bit = 1; bit <= 1024; bit *= 2) {
+  for (let bit = 1; bit <= Math.pow(2, TOTAL_BITS); bit *= 2) {
     if ((n & bit) !== 0) {
-      freqs.push(
-        NUMBERS_TOP_FREQUENCY -
-          Math.log2(bit) *
-            ((NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10),
-      );
+      freqs.push(NUMBERS_TOP_FREQUENCY - Math.log2(bit) * FREQUENCY_GAP);
     }
   }
 
   return freqs;
 }
 
-export function freqsToNumber(buffer: number[]): number {
+export function freqsToNumber(decode: Function, buffer: number[]): number {
   let number = 0;
   for (const frequency of buffer) {
     if (
@@ -32,41 +31,38 @@ export function freqsToNumber(buffer: number[]): number {
       continue;
     const bit = Math.pow(
       2,
-      (NUMBERS_TOP_FREQUENCY - frequency) /
-        ((NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10),
+      (NUMBERS_TOP_FREQUENCY - frequency) / FREQUENCY_GAP,
     );
     number += bit;
   }
+  console.log(`decoded ${number} is ${decode(number)}`);
 
-  return number;
+  return decode(number);
 }
 
-/* bit representations
-  19000 // 1024
-  19100 // 512
-  19200 // 256
-  19300 // 128
-  19400 // 64
-  19500 // 32
-  19600 // 16
-  l9700 // 8
-  19800 // 4
-  19900 // 2
-  20000 // 1
-*/
-
-export async function playNumbers(playTone: Function, numbers: number[]) {
-  const sequence = [START_OF_SEQUENCE_FREQUENCY];
+export async function playNumbers(
+  playTone: Function,
+  encode: Function,
+  isError: RefObject<boolean>,
+  numbers: number[],
+) {
+  const sequence = [[START_OF_SEQUENCE_FREQUENCY]];
   for (let number of numbers) {
-    for (const freq of numberToFreqs(number)) {
-      sequence.push(freq);
-    }
-    sequence.push(END_OF_NUMBER_FREQUENCY);
+    console.log(`encoded ${number} is ${encode(number)}`);
+    sequence.push([...numberToFreqs(encode(number)), END_OF_NUMBER_FREQUENCY]);
   }
-  sequence.push(END_OF_SEQUENCE_FREQUENCY);
+  sequence.push([END_OF_SEQUENCE_FREQUENCY]);
 
-  for (const tone of sequence) {
-    playTone(tone, PLAY_INTERVAL / 1000);
-    await new Promise((r) => setTimeout(r, PLAY_INTERVAL));
+  for (const data of sequence) {
+    isError.current = true;
+    while (isError.current) {
+      console.log(`error is true, gonna play [${data.toString()}]`);
+      for (const tone of data) {
+        playTone(tone, PLAY_INTERVAL / 1000);
+        await new Promise((r) => setTimeout(r, PLAY_INTERVAL));
+      }
+      await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 3));
+    }
+    console.log("error is FALSE! going to next number!!");
   }
 }

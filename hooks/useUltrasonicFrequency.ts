@@ -1,9 +1,8 @@
 import {
   CARRIER_FREQUENCY,
+  FREQUENCY_GAP,
   MAX_FREQ,
   MIN_FREQ,
-  NUMBERS_BOTTOM_FREQUENCY,
-  NUMBERS_TOP_FREQUENCY,
   SAMPLE_RATE,
 } from "@/utils/config";
 import { useEffect, useState } from "react";
@@ -14,8 +13,6 @@ import {
 } from "react-native";
 
 const { Ultrasonic } = NativeModules;
-
-const GAP = (NUMBERS_TOP_FREQUENCY - NUMBERS_BOTTOM_FREQUENCY) / 10;
 
 export function useUltrasonicFrequency() {
   const [freq, setFreq] = useState<number | null>(null);
@@ -30,7 +27,7 @@ export function useUltrasonicFrequency() {
 
     const sub = DeviceEventEmitter.addListener(
       "ultrasonicFrequency",
-      (f: number) => setFreq(Math.round(f / GAP) * GAP),
+      (f: number) => setFreq(Math.round(f / FREQUENCY_GAP) * FREQUENCY_GAP),
     );
 
     return () => {

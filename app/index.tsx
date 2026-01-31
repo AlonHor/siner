@@ -1,8 +1,11 @@
+import { useHamming1511 } from "@/hooks/useHamming1511";
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
 import {
   END_OF_NUMBER_FREQUENCY,
   END_OF_SEQUENCE_FREQUENCY,
+  ERROR_DETECTED_FREQUENCY,
+  NO_ERROR_FREQUENCY,
   PLAY_INTERVAL,
   START_OF_SEQUENCE_FREQUENCY,
 } from "@/utils/config";
@@ -15,6 +18,7 @@ LogBox.ignoreLogs(["Open debugger to view warnings."]);
 export default function Index() {
   const { playTone } = useSineWavePlayer();
   const freq = useUltrasonicFrequency();
+  const { encode, decode } = useHamming1511();
 
   const [lastFrequencyChange, setLastFrequencyChange] = useState(Date.now());
   const [lastFrequency, setLastFrequency] = useState(-1);
@@ -24,18 +28,50 @@ export default function Index() {
   const [textInput, setTextInput] = useState("");
 
   let isMidSequence = useRef(false);
+  let isError = useRef(true);
 
   useEffect(() => {
     if (Date.now() - PLAY_INTERVAL * 0.6 > lastFrequencyChange) {
-      if (lastFrequency === END_OF_SEQUENCE_FREQUENCY)
-        isMidSequence.current = false;
-      else if (lastFrequency === START_OF_SEQUENCE_FREQUENCY) {
-        setNumbers([]);
-        isMidSequence.current = true;
-      } else if (lastFrequency === END_OF_NUMBER_FREQUENCY) {
-        setNumbers((n) => [...n, freqsToNumber(buffer)]);
-        setBuffer([]);
-      } else if (isMidSequence.current) setBuffer((b) => [...b, lastFrequency]);
+      switch (lastFrequency) {
+        case END_OF_SEQUENCE_FREQUENCY:
+          playTone(NO_ERROR_FREQUENCY, (PLAY_INTERVAL * 2) / 1000);
+          isMidSequence.current = false;
+          break;
+
+        case START_OF_SEQUENCE_FREQUENCY:
+          console.log("heard start seq, played no error");
+          playTone(NO_ERROR_FREQUENCY, (PLAY_INTERVAL * 2) / 1000);
+          setNumbers([]);
+          isMidSequence.current = true;
+          break;
+
+        case END_OF_NUMBER_FREQUENCY:
+          const number = freqsToNumber(decode, buffer);
+          setBuffer([]);
+          if (number === null) {
+            console.log("error detected.");
+            playTone(ERROR_DETECTED_FREQUENCY, (PLAY_INTERVAL * 2) / 1000);
+          } else {
+            console.log("all good.");
+            playTone(NO_ERROR_FREQUENCY, (PLAY_INTERVAL * 2) / 1000);
+            setNumbers((n) => [...n, number]);
+          }
+          break;
+
+        case NO_ERROR_FREQUENCY:
+          console.log("heard no error");
+          isError.current = false;
+          break;
+
+        case ERROR_DETECTED_FREQUENCY:
+          console.log("heard error");
+          isError.current = true;
+          break;
+
+        default:
+          if (isMidSequence.current) setBuffer((b) => [...b, lastFrequency]);
+          break;
+      }
     }
     setLastFrequencyChange(Date.now());
     setLastFrequency(freq ?? -1);
@@ -45,13 +81,11 @@ export default function Index() {
   function sendMessage() {
     playNumbers(
       playTone,
+      encode,
+      isError,
       textInput.split("").map((c) => c.charCodeAt(0)),
     );
   }
-
-  // function playSomeNumbers() {
-  //   playNumbers(playTone, [260, 260, 508, 508, 248, 903, 903]);
-  // }
 
   return (
     <View
