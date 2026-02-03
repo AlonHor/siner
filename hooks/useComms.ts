@@ -21,10 +21,6 @@ export function useComms({
   onDataChange: (data: number[]) => any;
   onBufferChange: (buffer: number[]) => any;
 }) {
-  const { playTone } = useSineWavePlayer();
-  const freq = useUltrasonicFrequency();
-  const { encode, decode } = useHamming1511();
-
   let lastFrequencyChange = useRef<number>(Date.now());
   let lastFrequency = useRef<number>(-1);
 
@@ -36,13 +32,23 @@ export function useComms({
   let channel = useRef<number>(0);
   let channelFactor = useRef<number>(0);
 
+  const { playTone } = useSineWavePlayer();
+  const freq = useUltrasonicFrequency({ channelFactor });
+  const { encode, decode } = useHamming1511();
+
   useEffect(() => {
-    channel.current = 0;
+    channel.current = 1;
   }, []);
+
+  function changeChannel(ch: number) {
+    channel.current = ch;
+    console.log(`channel is now ${channel.current}`);
+  }
 
   useEffect(() => {
     channelFactor.current = channel.current * CHANNEL_BANDWIDTH;
-  }, [channel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel.current]);
 
   useEffect(() => {
     if (Date.now() - PLAY_INTERVAL * 0.6 > lastFrequencyChange.current) {
@@ -50,6 +56,7 @@ export function useComms({
         lastFrequency.current <= MAX_VALID_FREQ ||
         lastFrequency.current >= MIN_VALID_FREQ
       ) {
+        console.log(`H: caught ${lastFrequency.current}`);
         switch (lastFrequency.current) {
           case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactor.current:
             isSendError.current = false;
@@ -57,6 +64,7 @@ export function useComms({
             break;
 
           case START_OF_SEQUENCE_BASE_FREQUENCY + channelFactor.current:
+            console.log("H: start sequence!");
             isSendError.current = false;
             data.current = [];
             buffer.current = [];
@@ -74,7 +82,8 @@ export function useComms({
             if (number === null) {
               console.log("R: error detected, playing ERROR_DETECTED!");
               playTone(
-                ERROR_DETECTED_BASE_FREQUENCY + channelFactor.current,
+                ERROR_DETECTED_BASE_FREQUENCY,
+                channelFactor,
                 PLAY_INTERVAL / 1000,
               );
             } else {
@@ -100,7 +109,7 @@ export function useComms({
     lastFrequencyChange.current = Date.now();
     lastFrequency.current = freq ?? -1;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [freq, channelFactor]);
+  }, [freq, channelFactor.current]);
 
   async function transmitData(data: number[]) {
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
@@ -120,7 +129,7 @@ export function useComms({
           `T: will (re?)send [${data.map((t) => t + channelFactor.current).toString()}]`,
         );
         for (const tone of data) {
-          playTone(tone + channelFactor.current, PLAY_INTERVAL / 1000);
+          playTone(tone, channelFactor, PLAY_INTERVAL / 1000);
           await new Promise((r) => setTimeout(r, PLAY_INTERVAL));
         }
         isSendError.current = false;
@@ -134,5 +143,5 @@ export function useComms({
     transmitData(text.split("").map((c) => c.charCodeAt(0)));
   }
 
-  return { sendMessage, data, buffer };
+  return { sendMessage, data, buffer, channelFactor, changeChannel };
 }

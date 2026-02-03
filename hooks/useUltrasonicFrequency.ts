@@ -5,7 +5,7 @@ import {
   MIN_FFT_FREQ,
   SAMPLE_RATE,
 } from "@/utils/config";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   DeviceEventEmitter,
   NativeModules,
@@ -14,7 +14,11 @@ import {
 
 const { Ultrasonic } = NativeModules;
 
-export function useUltrasonicFrequency() {
+export function useUltrasonicFrequency({
+  channelFactor,
+}: {
+  channelFactor: React.RefObject<number>;
+}) {
   const [freq, setFreq] = useState<number | null>(null);
 
   useEffect(() => {
@@ -24,7 +28,7 @@ export function useUltrasonicFrequency() {
       );
       Ultrasonic.start(
         SAMPLE_RATE,
-        CARRIER_BASE_FREQUENCY,
+        CARRIER_BASE_FREQUENCY + channelFactor.current,
         MIN_FFT_FREQ,
         MAX_FFT_FREQ,
       );
@@ -39,7 +43,8 @@ export function useUltrasonicFrequency() {
       sub.remove();
       Ultrasonic.stop();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channelFactor.current]);
 
   return freq;
 }

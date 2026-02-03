@@ -11,31 +11,43 @@ export function useSineWavePlayer() {
   /**
    * Plays a single tone (plus carrier if enabled) for a fixed duration.
    */
-  const playTone = useCallback(async (freq: number, duration: number) => {
-    // merge carrier + requested freqs
-    const finalFreqs =
-      CARRIER_BASE_FREQUENCY != null ? [freq, CARRIER_BASE_FREQUENCY] : [freq];
+  const playTone = useCallback(
+    async (
+      freq: number,
+      channelFactor: React.RefObject<number>,
+      duration: number,
+    ) => {
+      // merge carrier + requested freqs
+      const finalFreqs =
+        CARRIER_BASE_FREQUENCY != null
+          ? [
+              freq + channelFactor.current,
+              CARRIER_BASE_FREQUENCY + channelFactor.current,
+            ]
+          : [freq + channelFactor.current];
 
-    const base64 = generatePolyphonicWav(finalFreqs, duration, SAMPLE_RATE);
+      const base64 = generatePolyphonicWav(finalFreqs, duration, SAMPLE_RATE);
 
-    const { sound } = await Audio.Sound.createAsync({
-      uri: "data:audio/wav;base64," + base64,
-    });
-
-    currentSound.current = sound;
-    await sound.playAsync();
-
-    await new Promise<void>((resolve) => {
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if ("didJustFinish" in status && status.didJustFinish) {
-          sound.unloadAsync();
-          resolve();
-        }
+      const { sound } = await Audio.Sound.createAsync({
+        uri: "data:audio/wav;base64," + base64,
       });
-    });
 
-    currentSound.current = null;
-  }, []);
+      currentSound.current = sound;
+      await sound.playAsync();
+
+      await new Promise<void>((resolve) => {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if ("didJustFinish" in status && status.didJustFinish) {
+            sound.unloadAsync();
+            resolve();
+          }
+        });
+      });
+
+      currentSound.current = null;
+    },
+    [],
+  );
 
   const stop = useCallback(async () => {
     if (currentSound.current) {
