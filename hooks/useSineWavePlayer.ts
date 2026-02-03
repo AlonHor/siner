@@ -1,4 +1,4 @@
-import { CARRIER_FREQUENCY, SAMPLE_RATE } from "@/utils/config";
+import { CARRIER_BASE_FREQUENCY, SAMPLE_RATE } from "@/utils/config";
 import { Audio } from "expo-av";
 import { useCallback, useRef, useState } from "react";
 
@@ -14,7 +14,7 @@ export function useSineWavePlayer() {
   const playTone = useCallback(async (freq: number, duration: number) => {
     // merge carrier + requested freqs
     const finalFreqs =
-      CARRIER_FREQUENCY != null ? [freq, CARRIER_FREQUENCY] : [freq];
+      CARRIER_BASE_FREQUENCY != null ? [freq, CARRIER_BASE_FREQUENCY] : [freq];
 
     const base64 = generatePolyphonicWav(finalFreqs, duration, SAMPLE_RATE);
 

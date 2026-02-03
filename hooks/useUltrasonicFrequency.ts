@@ -1,8 +1,8 @@
 import {
-  CARRIER_FREQUENCY,
+  CARRIER_BASE_FREQUENCY,
   FREQUENCY_GAP,
-  MAX_FREQ,
-  MIN_FREQ,
+  MAX_FFT_FREQ,
+  MIN_FFT_FREQ,
   SAMPLE_RATE,
 } from "@/utils/config";
 import { useEffect, useState } from "react";
@@ -22,7 +22,12 @@ export function useUltrasonicFrequency() {
       await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
       );
-      Ultrasonic.start(SAMPLE_RATE, CARRIER_FREQUENCY, MIN_FREQ, MAX_FREQ);
+      Ultrasonic.start(
+        SAMPLE_RATE,
+        CARRIER_BASE_FREQUENCY,
+        MIN_FFT_FREQ,
+        MAX_FFT_FREQ,
+      );
     })();
 
     const sub = DeviceEventEmitter.addListener(
