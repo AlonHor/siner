@@ -8,17 +8,13 @@ LogBox.ignoreLogs(["Open debugger to view warnings."]);
 export default function Index() {
   const freq = useUltrasonicFrequency();
 
-  function onBufferChange(buffer: number[]) {
-    setBuffer(buffer);
-  }
-
   const [textInput, setTextInput] = useState("");
-  const [numbers, setNumbers] = useState<number[]>([]);
+  const [data, setData] = useState<number[]>([]);
   const [buffer, setBuffer] = useState<number[]>([]);
 
   const { sendMessage } = useComms({
-    onBufferChange,
-    onDataChange: setNumbers,
+    onBufferChange: setBuffer,
+    onDataChange: setData,
   });
 
   return (
@@ -48,11 +44,10 @@ export default function Index() {
         {"\n"}Live Frequency: {freq}
       </Text>
       <Text>{"\n"}Text:</Text>
-      {/* <Text>{numbers.map((n) => String.fromCharCode(n)).join("") + "\n"}</Text> */}
-      <Text>{numbers.map((n) => String.fromCharCode(n)) + "\n"}</Text>
-      <Text>Numbers:</Text>
+      <Text>{data.map((n) => String.fromCharCode(n)) + "\n"}</Text>
+      <Text>Data:</Text>
       <Text style={{ marginHorizontal: 30 }}>
-        {"[" + numbers.toString() + "]\n"}
+        {"[" + data.toString() + "]\n"}
       </Text>
       <Text>Buffer:</Text>
       <Text>{"[" + buffer.toString() + "]\n"}</Text>

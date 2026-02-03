@@ -1,6 +1,7 @@
 import { useHamming1511 } from "@/hooks/useHamming1511";
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
+import { freqsToNumber, numberToFreqs } from "@/utils/bit";
 import {
   CHANNEL_BANDWIDTH,
   END_OF_NUMBER_BASE_FREQUENCY,
@@ -11,7 +12,6 @@ import {
   PLAY_INTERVAL,
   START_OF_SEQUENCE_BASE_FREQUENCY,
 } from "@/utils/config";
-import { freqsToNumber, playNumbers } from "@/utils/numberPlayer";
 import { useEffect, useRef } from "react";
 
 export function useComms({
@@ -37,7 +37,7 @@ export function useComms({
   let channelFactor = useRef<number>(0);
 
   useEffect(() => {
-    channel.current = 2;
+    channel.current = 0;
   }, []);
 
   useEffect(() => {
@@ -102,14 +102,36 @@ export function useComms({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [freq, channelFactor]);
 
+  async function transmitData(data: number[]) {
+    const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
+    for (let number of data) {
+      console.log(`T: encoded ${number} to ${encode(number)}`);
+      baseSequence.push([
+        ...numberToFreqs(encode(number)),
+        END_OF_NUMBER_BASE_FREQUENCY,
+      ]);
+    }
+    baseSequence.push([END_OF_SEQUENCE_BASE_FREQUENCY]);
+
+    for (const data of baseSequence) {
+      isSendError.current = true;
+      while (isSendError.current) {
+        console.log(
+          `T: will (re?)send [${data.map((t) => t + channelFactor.current).toString()}]`,
+        );
+        for (const tone of data) {
+          playTone(tone + channelFactor.current, PLAY_INTERVAL / 1000);
+          await new Promise((r) => setTimeout(r, PLAY_INTERVAL));
+        }
+        isSendError.current = false;
+        await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 2.6));
+      }
+      console.log("T: didn't hear any errors! going to next number!");
+    }
+  }
+
   function sendMessage(text: string) {
-    playNumbers(
-      playTone,
-      encode,
-      isSendError,
-      channelFactor,
-      text.split("").map((c) => c.charCodeAt(0)),
-    );
+    transmitData(text.split("").map((c) => c.charCodeAt(0)));
   }
 
   return { sendMessage, data, buffer };
