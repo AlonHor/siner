@@ -8,11 +8,9 @@ LogBox.ignoreLogs(["Open debugger to view warnings."]);
 export default function Index() {
   const [textInput, setTextInput] = useState("");
   const [data, setData] = useState<number[]>([]);
-  const [buffer, setBuffer] = useState<number[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState<number>(1);
+  const [selectedChannel, setSelectedChannel] = useState<number>(0);
 
-  const { sendMessage, channelFactor, changeChannel } = useComms({
-    onBufferChange: setBuffer,
+  const { sendMessage, changeChannel, buffer, isMidSequence } = useComms({
     onDataChange: setData,
   });
 
@@ -21,7 +19,7 @@ export default function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChannel]);
 
-  const freq = useUltrasonicFrequency({ channelFactor });
+  const { freq } = useUltrasonicFrequency();
 
   return (
     <View
@@ -33,23 +31,48 @@ export default function Index() {
       }}
     >
       <View style={{ flexDirection: "row", gap: 10, marginVertical: 10 }}>
-        <Button title="Channel 0" onPress={() => setSelectedChannel(0)} />
-        <Button title="Channel 1" onPress={() => setSelectedChannel(1)} />
+        <View
+          style={{
+            backgroundColor: selectedChannel === 0 ? "black" : "grey",
+            padding: 5,
+          }}
+        >
+          <Button title="Channel 0" onPress={() => setSelectedChannel(0)} />
+        </View>
+        <View
+          style={{
+            backgroundColor: selectedChannel === 1 ? "black" : "grey",
+            padding: 5,
+          }}
+        >
+          <Button title="Channel 1" onPress={() => setSelectedChannel(1)} />
+        </View>
       </View>
 
-      <TextInput
-        value={textInput}
-        style={{
-          width: 240,
-          margin: 10,
-          padding: 10,
-          borderWidth: 1,
-          backgroundColor: "#222",
-          color: "white",
-          borderRadius: 10,
-        }}
-        onChangeText={(text) => setTextInput(text)}
-      />
+      <View style={{ display: "flex", flexDirection: "row", gap: 5 }}>
+        <TextInput
+          value={textInput}
+          style={{
+            width: 240,
+            margin: 10,
+            padding: 10,
+            borderWidth: 1,
+            backgroundColor: "#222",
+            color: "white",
+            borderRadius: 10,
+          }}
+          onChangeText={(text) => setTextInput(text)}
+        />
+        <View
+          style={{
+            top: 25 * 0.75,
+            width: 25,
+            height: 25,
+            borderRadius: 25,
+            backgroundColor: isMidSequence ? "green" : "grey",
+          }}
+        />
+      </View>
       <Button onPress={() => sendMessage(textInput)} title="Send" />
 
       <Text>
@@ -57,15 +80,24 @@ export default function Index() {
       </Text>
 
       <Text>{"\n"}Text:</Text>
-      <Text>{data.map((n) => String.fromCharCode(n)) + "\n"}</Text>
+      <Text>
+        {'"' + data.map((n) => String.fromCharCode(n)).join("") + '"\n'}
+      </Text>
 
       <Text>Data:</Text>
       <Text style={{ marginHorizontal: 30 }}>
-        {"[" + data.toString() + "]\n"}
+        {"[" + data.join(", ") + "]\n"}
       </Text>
 
       <Text>Buffer:</Text>
-      <Text>{"[" + buffer.toString() + "]\n"}</Text>
+      <Text>
+        {"{ " +
+          buffer
+            .map((b) => ((b % 1000) / 50) % 10)
+            .reverse()
+            .join("") +
+          " }\n"}
+      </Text>
     </View>
   );
 }

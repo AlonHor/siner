@@ -30,10 +30,13 @@ class UltrasonicModule(
   private var minFreq: Double = 15000.0
   private var maxFreq: Double = 22000.0
 
+  private var silentFreq: Double = 18000.0
+  private var silenceThresholdDb: Double = 6.0
+
   override fun getName() = "Ultrasonic"
 
   @ReactMethod
-  fun start(sampleRate: Int, carrierFreq: Double, minFreq: Double, maxFreq: Double) {
+  fun start(sampleRate: Int, carrierFreq: Double, minFreq: Double, maxFreq: Double, silentFreq: Double, silenceThresholdDb: Double) {
     if (running) return
 
     this.sampleRate = sampleRate
@@ -41,6 +44,9 @@ class UltrasonicModule(
 
     this.minFreq = minFreq
     this.maxFreq = maxFreq
+
+    this.silentFreq = silentFreq
+    this.silenceThresholdDb = silenceThresholdDb
 
     val minBuf = AudioRecord.getMinBufferSize(
       sampleRate,
@@ -124,12 +130,43 @@ class UltrasonicModule(
       val lf = minOf(f1, f2)
       val nf = maxOf(f1, f2)
       val corrected = nf / (lf / carrierFreq)
+
+      // Convert detected magnitudes to dB
+      val detectedDb = magToDb(m1)
+
+      // Measure silence reference
+      val silentBin = freqToBin(silentFreq)
+      val silentMag =
+        if (silentBin in 1 until FFT_SIZE / 2) {
+          val re = fftBuffer[2 * silentBin]
+          val im = fftBuffer[2 * silentBin + 1]
+          re*re + im*im
+        } else {
+          0.0
+        }
+
+      val silentDb = magToDb(silentMag)
+
+      // Noise gate
+      if (kotlin.math.abs(detectedDb - silentDb) < silenceThresholdDb) {
+        emit(-1.0)
+        return
+      }
+
       emit(corrected)
     }
   }
 
   private fun binToFreq(b: Int) =
     b * sampleRate.toDouble() / FFT_SIZE
+
+  private fun magToDb(mag: Double): Double {
+    return 10.0 * Math.log10(mag + 1e-12)
+  }
+
+  private fun freqToBin(freq: Double): Int {
+    return ((freq / sampleRate) * FFT_SIZE).toInt()
+  }
 
   private fun emit(f: Double) {
     reactContext

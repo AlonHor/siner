@@ -12,104 +12,133 @@ import {
   PLAY_INTERVAL,
   START_OF_SEQUENCE_BASE_FREQUENCY,
 } from "@/utils/config";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function useComms({
   onDataChange,
-  onBufferChange,
 }: {
   onDataChange: (data: number[]) => any;
-  onBufferChange: (buffer: number[]) => any;
 }) {
-  let lastFrequencyChange = useRef<number>(Date.now());
-  let lastFrequency = useRef<number>(-1);
+  const heldFreq = useRef<number | null>(null);
+  const holdStart = useRef<number>(0);
+  const emitCount = useRef<number>(0);
+  const freqRef = useRef<number | null>(null);
 
-  let isMidSequence = useRef(false);
-  let isSendError = useRef(true);
-  let data = useRef<number[]>([]);
-  let buffer = useRef<number[]>([]);
+  const INITIAL_DELAY = 0.5 * PLAY_INTERVAL;
 
-  let channel = useRef<number>(0);
-  let channelFactor = useRef<number>(0);
+  const [isMidSequence, setIsMidSequence] = useState(false);
+  const isMidSequenceRef = useRef(false);
+  const isSendError = useRef(true);
+
+  const [buffer, setBuffer] = useState<number[]>([]);
+  const bufferRef = useRef<number[]>([]);
+  const data = useRef<number[]>([]);
 
   const { playTone } = useSineWavePlayer();
-  const freq = useUltrasonicFrequency({ channelFactor });
+  const { freq, setChannelFactor, channelFactor } = useUltrasonicFrequency();
   const { encode, decode } = useHamming1511();
 
-  useEffect(() => {
-    channel.current = 1;
-  }, []);
+  const channelFactorRef = useRef<number>(0);
 
   function changeChannel(ch: number) {
-    channel.current = ch;
-    console.log(`channel is now ${channel.current}`);
+    setChannelFactor(ch * CHANNEL_BANDWIDTH);
   }
 
   useEffect(() => {
-    channelFactor.current = channel.current * CHANNEL_BANDWIDTH;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel.current]);
+    freqRef.current = freq;
+  }, [freq]);
 
   useEffect(() => {
-    if (Date.now() - PLAY_INTERVAL * 0.6 > lastFrequencyChange.current) {
-      if (
-        lastFrequency.current <= MAX_VALID_FREQ ||
-        lastFrequency.current >= MIN_VALID_FREQ
-      ) {
-        console.log(`H: caught ${lastFrequency.current}`);
-        switch (lastFrequency.current) {
-          case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactor.current:
-            isSendError.current = false;
-            isMidSequence.current = false;
-            break;
+    bufferRef.current = buffer;
+  }, [buffer]);
 
-          case START_OF_SEQUENCE_BASE_FREQUENCY + channelFactor.current:
-            console.log("H: start sequence!");
-            isSendError.current = false;
-            data.current = [];
-            buffer.current = [];
-            onDataChange(data.current);
-            isMidSequence.current = true;
-            break;
+  useEffect(() => {
+    isMidSequenceRef.current = isMidSequence;
+  }, [isMidSequence]);
 
-          case END_OF_NUMBER_BASE_FREQUENCY + channelFactor.current:
-            const number = freqsToNumber(
-              decode,
-              buffer.current.map((t) => t - channelFactor.current),
+  useEffect(() => {
+    channelFactorRef.current = channelFactor;
+  }, [channelFactor]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = performance.now();
+
+      if (freqRef.current !== heldFreq.current) {
+        heldFreq.current = freqRef.current;
+        holdStart.current = now;
+        emitCount.current = 0;
+        return;
+      }
+
+      const heldDuration = now - holdStart.current;
+      if (heldDuration < INITIAL_DELAY) return;
+
+      const effectiveTime = heldDuration - INITIAL_DELAY;
+      const shouldHaveEmitted = 1 + Math.floor(effectiveTime / PLAY_INTERVAL);
+
+      while (emitCount.current < shouldHaveEmitted) {
+        onFreqHeld(freqRef.current ?? -1);
+        emitCount.current++;
+      }
+    }, 5);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function onFreqHeld(f: number) {
+    if (f <= MAX_VALID_FREQ && f >= MIN_VALID_FREQ) {
+      switch (f) {
+        case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
+          console.log("H: end seq!");
+          isSendError.current = false;
+          setIsMidSequence(false);
+          break;
+
+        case START_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
+          console.log("H: start seq!");
+          isSendError.current = false;
+          data.current = [];
+          setBuffer([]);
+          onDataChange(data.current);
+          setIsMidSequence(true);
+          break;
+
+        case END_OF_NUMBER_BASE_FREQUENCY + channelFactorRef.current:
+          console.log(`H: parsing buffer [${bufferRef.current.toString()}]`);
+          const number = decode(
+            freqsToNumber(
+              bufferRef.current.map((t) => t - channelFactorRef.current),
+            ),
+          );
+          console.log(
+            `H: decoded to ${number} (${String.fromCharCode(number != null ? number : 32)})`,
+          );
+          setBuffer([]);
+          if (number === null) {
+            console.log("H: error detected, playing ERROR_DETECTED!");
+            playTone(
+              [ERROR_DETECTED_BASE_FREQUENCY],
+              channelFactorRef.current,
+              PLAY_INTERVAL / 1000,
             );
-            buffer.current = [];
-            onBufferChange(buffer.current);
-            if (number === null) {
-              console.log("R: error detected, playing ERROR_DETECTED!");
-              playTone(
-                ERROR_DETECTED_BASE_FREQUENCY,
-                channelFactor,
-                PLAY_INTERVAL / 1000,
-              );
-            } else {
-              data.current.push(number);
-              onDataChange(data.current);
-            }
-            break;
+          } else if (number !== 0) {
+            data.current.push(number);
+            onDataChange(data.current);
+          }
+          break;
 
-          case ERROR_DETECTED_BASE_FREQUENCY + channelFactor.current:
-            console.log("T: heard ERROR_DETECTED, resending...");
-            isSendError.current = true;
-            break;
+        case ERROR_DETECTED_BASE_FREQUENCY + channelFactorRef.current:
+          console.log("T: heard ERROR_DETECTED, resending...");
+          isSendError.current = true;
+          break;
 
-          default:
-            if (isMidSequence.current) {
-              buffer.current.push(lastFrequency.current);
-              onBufferChange(buffer.current);
-            }
-            break;
-        }
+        default:
+          if (isMidSequenceRef.current) setBuffer((b) => [...b, f]);
+          break;
       }
     }
-    lastFrequencyChange.current = Date.now();
-    lastFrequency.current = freq ?? -1;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [freq, channelFactor.current]);
+  }
 
   async function transmitData(data: number[]) {
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
@@ -126,14 +155,12 @@ export function useComms({
       isSendError.current = true;
       while (isSendError.current) {
         console.log(
-          `T: will (re?)send [${data.map((t) => t + channelFactor.current).toString()}]`,
+          `T: will (re?)send [${data.map((t) => t + channelFactor).toString()}] {+${channelFactor}}`,
         );
-        for (const tone of data) {
-          playTone(tone, channelFactor, PLAY_INTERVAL / 1000);
-          await new Promise((r) => setTimeout(r, PLAY_INTERVAL));
-        }
+        playTone(data, channelFactor, PLAY_INTERVAL / 1000);
+        await new Promise((r) => setTimeout(r, PLAY_INTERVAL * data.length));
         isSendError.current = false;
-        await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 2.6));
+        await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 3));
       }
       console.log("T: didn't hear any errors! going to next number!");
     }
@@ -143,5 +170,11 @@ export function useComms({
     transmitData(text.split("").map((c) => c.charCodeAt(0)));
   }
 
-  return { sendMessage, data, buffer, channelFactor, changeChannel };
+  return {
+    sendMessage,
+    data,
+    buffer,
+    isMidSequence,
+    changeChannel,
+  };
 }

@@ -1,11 +1,11 @@
 import {
   CARRIER_BASE_FREQUENCY,
+  ERROR_DETECTED_BASE_FREQUENCY,
   FREQUENCY_GAP,
-  MAX_FFT_FREQ,
-  MIN_FFT_FREQ,
+  GLOBAL_SILENT_FREQ,
   SAMPLE_RATE,
 } from "@/utils/config";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DeviceEventEmitter,
   NativeModules,
@@ -14,23 +14,25 @@ import {
 
 const { Ultrasonic } = NativeModules;
 
-export function useUltrasonicFrequency({
-  channelFactor,
-}: {
-  channelFactor: React.RefObject<number>;
-}) {
+export function useUltrasonicFrequency() {
   const [freq, setFreq] = useState<number | null>(null);
+  const [channelFactor, setChannelFactor] = useState<number>(0);
 
   useEffect(() => {
+    console.log(
+      `restarting ultrasonic service with channel factor ${channelFactor}`,
+    );
     (async () => {
       await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
       );
       Ultrasonic.start(
         SAMPLE_RATE,
-        CARRIER_BASE_FREQUENCY + channelFactor.current,
-        MIN_FFT_FREQ,
-        MAX_FFT_FREQ,
+        CARRIER_BASE_FREQUENCY + channelFactor,
+        GLOBAL_SILENT_FREQ - FREQUENCY_GAP / 2,
+        ERROR_DETECTED_BASE_FREQUENCY + channelFactor + FREQUENCY_GAP / 2,
+        GLOBAL_SILENT_FREQ,
+        30,
       );
     })();
 
@@ -43,8 +45,7 @@ export function useUltrasonicFrequency({
       sub.remove();
       Ultrasonic.stop();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelFactor.current]);
+  }, [channelFactor]);
 
-  return freq;
+  return { freq, channelFactor, setChannelFactor };
 }

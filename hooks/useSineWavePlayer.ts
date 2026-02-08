@@ -12,19 +12,13 @@ export function useSineWavePlayer() {
    * Plays a single tone (plus carrier if enabled) for a fixed duration.
    */
   const playTone = useCallback(
-    async (
-      freq: number,
-      channelFactor: React.RefObject<number>,
-      duration: number,
-    ) => {
+    async (freqs: number[], channelFactor: number, duration: number) => {
       // merge carrier + requested freqs
-      const finalFreqs =
+      const finalFreqs = freqs.map((freq) =>
         CARRIER_BASE_FREQUENCY != null
-          ? [
-              freq + channelFactor.current,
-              CARRIER_BASE_FREQUENCY + channelFactor.current,
-            ]
-          : [freq + channelFactor.current];
+          ? [freq + channelFactor, CARRIER_BASE_FREQUENCY + channelFactor]
+          : [freq + channelFactor],
+      );
 
       const base64 = generatePolyphonicWav(finalFreqs, duration, SAMPLE_RATE);
 
@@ -66,27 +60,34 @@ export function useSineWavePlayer() {
 }
 
 function generatePolyphonicWav(
-  freqs: number[],
-  duration: number,
+  freqs: number[][], // array of frequency groups
+  duration: number, // duration of each group
   sampleRate: number,
 ): string {
   const numChannels = 1;
   const bitsPerSample = 16;
-  const numSamples = Math.floor(sampleRate * duration);
   const blockAlign = (numChannels * bitsPerSample) / 8;
   const byteRate = sampleRate * blockAlign;
-  const dataSize = numSamples * blockAlign;
+
+  const fadeTime = 0.005;
+  const fadeSamples = Math.floor(sampleRate * fadeTime);
+
+  // total samples = duration per group * number of groups
+  const numSamplesPerGroup = Math.floor(sampleRate * duration);
+  const totalSamples = numSamplesPerGroup * freqs.length;
+  const dataSize = totalSamples * blockAlign;
   const headerSize = 44;
 
   const buffer = new ArrayBuffer(headerSize + dataSize);
   const view = new DataView(buffer);
 
+  // WAV header
   writeStr(view, 0, "RIFF");
   view.setUint32(4, 36 + dataSize, true);
   writeStr(view, 8, "WAVE");
   writeStr(view, 12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
+  view.setUint32(16, 16, true); // PCM chunk size
+  view.setUint16(20, 1, true); // PCM format
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
@@ -95,31 +96,31 @@ function generatePolyphonicWav(
   writeStr(view, 36, "data");
   view.setUint32(40, dataSize, true);
 
-  const fadeTime = 0.005;
-  const fadeSamples = Math.floor(sampleRate * fadeTime);
-
   let offset = headerSize;
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    let sample = 0;
 
-    for (const f of freqs) {
-      sample += Math.sin(2 * Math.PI * f * t);
+  for (const group of freqs) {
+    for (let i = 0; i < numSamplesPerGroup; i++) {
+      const t = i / sampleRate;
+      let sample = 0;
+
+      for (const f of group) {
+        sample += Math.sin(2 * Math.PI * f * t);
+      }
+
+      sample /= group.length; // avoid clipping
+
+      // fade in/out to avoid clicks
+      let env = 1;
+      if (i < fadeSamples) {
+        env = i / fadeSamples;
+      } else if (i > numSamplesPerGroup - fadeSamples) {
+        env = (numSamplesPerGroup - i) / fadeSamples;
+      }
+
+      const amp = Math.floor(sample * env * 0x7fff * 0.9);
+      view.setInt16(offset, amp, true);
+      offset += 2;
     }
-
-    sample /= freqs.length; // avoid clipping
-
-    // fade to avoid ticks
-    let env = 1;
-    if (i < fadeSamples) {
-      env = i / fadeSamples;
-    } else if (i > numSamples - fadeSamples) {
-      env = (numSamples - i) / fadeSamples;
-    }
-
-    const amp = Math.floor(sample * env * 0x7fff * 0.9);
-    view.setInt16(offset, amp, true);
-    offset += 2;
   }
 
   return uint8ToBase64(new Uint8Array(buffer));
