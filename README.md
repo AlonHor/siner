@@ -94,7 +94,7 @@ Channel Layout:
 └──────────────────────────────────────────────────────┘
 
 Each channel provides ~800 Hz bandwidth
-Data rate: ~50-100 bits/second per channel
+Data rate: 5 bits/second per channel
 ```
 
 ### Doppler Effect Compensation
