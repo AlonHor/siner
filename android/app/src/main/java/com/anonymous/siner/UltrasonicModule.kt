@@ -33,10 +33,12 @@ class UltrasonicModule(
   private var silentFreq: Double = 18000.0
   private var silenceThresholdDb: Double = 6.0
 
+  private var frequencyGap: Int = 50
+
   override fun getName() = "Ultrasonic"
 
   @ReactMethod
-  fun start(sampleRate: Int, carrierFreq: Double, minFreq: Double, maxFreq: Double, silentFreq: Double, silenceThresholdDb: Double) {
+  fun start(sampleRate: Int, carrierFreq: Double, minFreq: Double, maxFreq: Double, silentFreq: Double, silenceThresholdDb: Double, frequencyGap: Int) {
     if (running) return
 
     this.sampleRate = sampleRate
@@ -47,6 +49,8 @@ class UltrasonicModule(
 
     this.silentFreq = silentFreq
     this.silenceThresholdDb = silenceThresholdDb
+
+    this.frequencyGap = frequencyGap
 
     val minBuf = AudioRecord.getMinBufferSize(
       sampleRate,
@@ -109,7 +113,7 @@ class UltrasonicModule(
 
       if (mag > m1) {
         if (b1 != -1 &&
-          Math.abs(freq - binToFreq(b1)) > 200) {
+          Math.abs(freq - binToFreq(b1)) > frequencyGap) {
           b2 = b1
           m2 = m1
         }
@@ -117,7 +121,7 @@ class UltrasonicModule(
         m1 = mag
       } else if (
         mag > m2 &&
-        Math.abs(freq - binToFreq(b1)) > 200
+        Math.abs(freq - binToFreq(b1)) > frequencyGap
       ) {
         b2 = i
         m2 = mag

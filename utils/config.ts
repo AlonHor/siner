@@ -2,10 +2,10 @@ export const PLAY_INTERVAL = 200;
 
 export const TOTAL_BITS = 15;
 
-export const GLOBAL_SILENT_FREQ = 18_500;
-
 // CHANNEL BANDWIDTH START
 export const CARRIER_BASE_FREQUENCY = 18_800;
+
+export const SILENT_BASE_FREQUENCY = 18_900;
 
 export const BIT_ZERO_BASE_FREQUENCY = 19_000;
 export const BIT_ONE_BASE_FREQUENCY = 19_050;
@@ -14,21 +14,14 @@ export const END_OF_NUMBER_BASE_FREQUENCY = 19_100;
 export const START_OF_SEQUENCE_BASE_FREQUENCY = 19_150;
 export const END_OF_SEQUENCE_BASE_FREQUENCY = 19_200;
 export const ERROR_DETECTED_BASE_FREQUENCY = 19_250;
+
+export const TOP_BASE_FREQUENCY = 19_250;
 // CHANNEL BANDWIDTH END
 
 export const SAMPLE_RATE = 48_000;
 
-export const MIN_BASE_FREQ = 18_600;
-export const MAX_BASE_FREQ = 21_200;
-
-export const MIN_FFT_FREQ = 17_000;
-export const MAX_FFT_FREQ = 23_000;
-
-export const MIN_VALID_FREQ = 18_600;
-export const MAX_VALID_FREQ = 21_200;
+export const MIN_VALID_DATA_FREQ = 18_500;
+export const MAX_VALID_DATA_FREQ = 21_500;
 
 export const CHANNEL_BANDWIDTH = 500;
-export const CHANNEL_COUNT =
-  (MAX_VALID_FREQ - MIN_VALID_FREQ) / CHANNEL_BANDWIDTH;
-
-export const FREQUENCY_GAP = 50;
+export const FREQUENCY_ROUND_GAP = 50;

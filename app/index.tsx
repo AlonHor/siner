@@ -37,7 +37,7 @@ export default function Index() {
             padding: 5,
           }}
         >
-          <Button title="Channel 0" onPress={() => setSelectedChannel(0)} />
+          <Button title="0" onPress={() => setSelectedChannel(0)} />
         </View>
         <View
           style={{
@@ -45,7 +45,31 @@ export default function Index() {
             padding: 5,
           }}
         >
-          <Button title="Channel 1" onPress={() => setSelectedChannel(1)} />
+          <Button title="1" onPress={() => setSelectedChannel(1)} />
+        </View>
+        <View
+          style={{
+            backgroundColor: selectedChannel === 2 ? "black" : "grey",
+            padding: 5,
+          }}
+        >
+          <Button title="2" onPress={() => setSelectedChannel(2)} />
+        </View>
+        <View
+          style={{
+            backgroundColor: selectedChannel === 3 ? "black" : "grey",
+            padding: 5,
+          }}
+        >
+          <Button title="3" onPress={() => setSelectedChannel(3)} />
+        </View>
+        <View
+          style={{
+            backgroundColor: selectedChannel === 4 ? "black" : "grey",
+            padding: 5,
+          }}
+        >
+          <Button title="4" onPress={() => setSelectedChannel(4)} />
         </View>
       </View>
 

@@ -7,8 +7,8 @@ import {
   END_OF_NUMBER_BASE_FREQUENCY,
   END_OF_SEQUENCE_BASE_FREQUENCY,
   ERROR_DETECTED_BASE_FREQUENCY,
-  MAX_VALID_FREQ,
-  MIN_VALID_FREQ,
+  MAX_VALID_DATA_FREQ,
+  MIN_VALID_DATA_FREQ,
   PLAY_INTERVAL,
   START_OF_SEQUENCE_BASE_FREQUENCY,
 } from "@/utils/config";
@@ -87,7 +87,7 @@ export function useComms({
   }, []);
 
   function onFreqHeld(f: number) {
-    if (f <= MAX_VALID_FREQ && f >= MIN_VALID_FREQ) {
+    if (f <= MAX_VALID_DATA_FREQ && f >= MIN_VALID_DATA_FREQ) {
       switch (f) {
         case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
           console.log("H: end seq!");
