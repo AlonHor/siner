@@ -38,7 +38,7 @@ export function useUltrasonicFrequency() {
         FFT_MIN,
         FFT_MAX,
         SILENT_BASE_FREQUENCY + channelFactor, // silent freq + factor
-        30, // silent db threshold
+        10, // silent db threshold
         FREQUENCY_ROUND_GAP,
       );
     })();
