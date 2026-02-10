@@ -24,7 +24,7 @@ export function useComms({
   const emitCount = useRef<number>(0);
   const freqRef = useRef<number | null>(null);
 
-  const INITIAL_DELAY = 0.5 * PLAY_INTERVAL;
+  const INITIAL_DELAY = 0.7 * PLAY_INTERVAL;
 
   const [isMidSequence, setIsMidSequence] = useState(false);
   const isMidSequenceRef = useRef(false);
