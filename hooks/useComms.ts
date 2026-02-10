@@ -1,4 +1,3 @@
-import { usePearsonHash } from "@/hooks/usePearsonHash";
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
 import { freqsToNumber, numberToFreqs } from "@/utils/bit";
@@ -6,12 +5,14 @@ import {
   CHANNEL_BANDWIDTH,
   END_OF_NUMBER_BASE_FREQUENCY,
   END_OF_SEQUENCE_BASE_FREQUENCY,
-  ERROR_DETECTED_BASE_FREQUENCY,
   MAX_VALID_DATA_FREQ,
   MIN_VALID_DATA_FREQ,
   PLAY_INTERVAL,
+  SIGERR_BASE_FREQUENCY,
+  SIGOKY_BASE_FREQUENCY,
   START_OF_SEQUENCE_BASE_FREQUENCY,
 } from "@/utils/config";
+import { decode, encode } from "@/utils/numberConversion";
 import { useEffect, useRef, useState } from "react";
 
 export function useComms({
@@ -24,11 +25,12 @@ export function useComms({
   const emitCount = useRef<number>(0);
   const freqRef = useRef<number | null>(null);
 
-  const INITIAL_DELAY = 0.7 * PLAY_INTERVAL;
+  const INITIAL_DELAY = 0.5 * PLAY_INTERVAL;
 
   const [isMidSequence, setIsMidSequence] = useState(false);
   const isMidSequenceRef = useRef(false);
   const isSendError = useRef(true);
+  const isRecieveError = useRef(false);
 
   const [buffer, setBuffer] = useState<number[]>([]);
   const bufferRef = useRef<number[]>([]);
@@ -36,7 +38,6 @@ export function useComms({
 
   const { playTone } = useSineWavePlayer();
   const { freq, setChannelFactor, channelFactor } = useUltrasonicFrequency();
-  const { encode, decode } = usePearsonHash();
 
   const channelFactorRef = useRef<number>(0);
 
@@ -91,46 +92,64 @@ export function useComms({
       switch (f) {
         case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
           console.log("H: end seq!");
-          isSendError.current = false;
           setIsMidSequence(false);
+
+          const checkSum = data.current.at(-1);
+          const calculatedSum = data.current
+            .slice(0, -1)
+            .reduce((a, c) => a + c, 0);
+
+          if (calculatedSum === checkSum) {
+            // sum matches
+            console.log("H: playing SIGOKY!");
+            playTone(
+              [SIGOKY_BASE_FREQUENCY],
+              channelFactorRef.current,
+              PLAY_INTERVAL / 1000,
+            );
+          } else {
+            console.log(`H: playing SIGERR! (${calculatedSum} != ${checkSum})`);
+            playTone(
+              [SIGERR_BASE_FREQUENCY],
+              channelFactorRef.current,
+              PLAY_INTERVAL / 1000,
+            );
+          }
+
           break;
 
         case START_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
           console.log("H: start seq!");
-          isSendError.current = false;
           data.current = [];
           setBuffer([]);
           onDataChange(data.current);
           setIsMidSequence(true);
+          isRecieveError.current = false;
           break;
 
         case END_OF_NUMBER_BASE_FREQUENCY + channelFactorRef.current:
-          console.log(`H: parsing buffer [${bufferRef.current.toString()}]`);
-          const number = decode(
-            freqsToNumber(
-              bufferRef.current.map((t) => t - channelFactorRef.current),
-            ),
+          console.log(`H: parsing [${bufferRef.current.toString()}]`);
+          const number = freqsToNumber(
+            bufferRef.current.map((t) => t - channelFactorRef.current),
           );
           console.log(
-            `H: decoded to ${number} (${String.fromCharCode(number != null ? number : 32)})`,
+            `H: got ${number} (${String.fromCharCode(number != null ? decode(number) : 32)})`,
           );
           setBuffer([]);
-          if (number === null) {
-            console.log("H: error detected, playing ERROR_DETECTED!");
-            playTone(
-              [ERROR_DETECTED_BASE_FREQUENCY],
-              channelFactorRef.current,
-              PLAY_INTERVAL / 1000,
-            );
-          } else if (number !== 0) {
+          if (number !== 0) {
             data.current.push(number);
             onDataChange(data.current);
           }
           break;
 
-        case ERROR_DETECTED_BASE_FREQUENCY + channelFactorRef.current:
-          console.log("T: heard ERROR_DETECTED, resending...");
+        case SIGERR_BASE_FREQUENCY + channelFactorRef.current:
+          console.log("T: detected SIGERR, forwarding...");
           isSendError.current = true;
+          break;
+
+        case SIGOKY_BASE_FREQUENCY + channelFactorRef.current:
+          console.log("T: detected SIGOKY, forwarding...");
+          isSendError.current = false;
           break;
 
         default:
@@ -142,32 +161,45 @@ export function useComms({
 
   async function transmitData(data: number[]) {
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
+    let sum = 0;
     for (let number of data) {
-      console.log(`T: encoded ${number} to ${encode(number)}`);
+      sum += number;
+      console.log(`T: will send ${number}`);
       baseSequence.push([
-        ...numberToFreqs(encode(number)),
+        ...numberToFreqs(number),
         END_OF_NUMBER_BASE_FREQUENCY,
       ]);
     }
+    baseSequence.push([...numberToFreqs(sum), END_OF_NUMBER_BASE_FREQUENCY]);
     baseSequence.push([END_OF_SEQUENCE_BASE_FREQUENCY]);
 
-    for (const data of baseSequence) {
+    isSendError.current = true;
+    while (isSendError.current) {
       isSendError.current = true;
-      while (isSendError.current) {
+      for (const data of baseSequence) {
         console.log(
-          `T: will (re?)send [${data.map((t) => t + channelFactor).toString()}] {+${channelFactor}}`,
+          `T: sending [${data.map((t) => t + channelFactor).toString()}] {+${channelFactor}}`,
         );
         playTone(data, channelFactor, PLAY_INTERVAL / 1000);
         await new Promise((r) => setTimeout(r, PLAY_INTERVAL * data.length));
-        isSendError.current = false;
-        await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 3));
       }
-      console.log("T: didn't hear any errors! going to next number!");
+      console.log("T: finished sending all data, listening for errors...");
+
+      // main loop catches SIGOKY and modifies isSendError.current to false
+      await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 5));
+
+      if (!isSendError.current) console.log("T: got SIGOKY, all good!");
+      else console.log("T: resending due to SIGERR / no reply...");
     }
   }
 
   function sendMessage(text: string) {
-    transmitData(text.split("").map((c) => c.charCodeAt(0)));
+    transmitData(
+      text
+        .toLowerCase()
+        .split("")
+        .map((c) => encode(c.charCodeAt(0))),
+    );
   }
 
   return {

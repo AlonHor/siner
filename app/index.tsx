@@ -1,5 +1,6 @@
 import { useComms } from "@/hooks/useComms";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
+import { decode, encode } from "@/utils/numberConversion";
 import React, { useEffect, useState } from "react";
 import { Button, LogBox, Text, TextInput, View } from "react-native";
 
@@ -33,7 +34,7 @@ export default function Index() {
       <View style={{ flexDirection: "row", gap: 10, marginVertical: 10 }}>
         <View
           style={{
-            backgroundColor: selectedChannel === 0 ? "black" : "grey",
+            backgroundColor: selectedChannel === 0 ? "black" : "transparent",
             padding: 5,
           }}
         >
@@ -41,7 +42,7 @@ export default function Index() {
         </View>
         <View
           style={{
-            backgroundColor: selectedChannel === 1 ? "black" : "grey",
+            backgroundColor: selectedChannel === 1 ? "black" : "transparent",
             padding: 5,
           }}
         >
@@ -49,7 +50,7 @@ export default function Index() {
         </View>
         <View
           style={{
-            backgroundColor: selectedChannel === 2 ? "black" : "grey",
+            backgroundColor: selectedChannel === 2 ? "black" : "transparent",
             padding: 5,
           }}
         >
@@ -57,7 +58,7 @@ export default function Index() {
         </View>
         <View
           style={{
-            backgroundColor: selectedChannel === 3 ? "black" : "grey",
+            backgroundColor: selectedChannel === 3 ? "black" : "transparent",
             padding: 5,
           }}
         >
@@ -65,7 +66,7 @@ export default function Index() {
         </View>
         <View
           style={{
-            backgroundColor: selectedChannel === 4 ? "black" : "grey",
+            backgroundColor: selectedChannel === 4 ? "black" : "transparent",
             padding: 5,
           }}
         >
@@ -85,7 +86,17 @@ export default function Index() {
             color: "white",
             borderRadius: 10,
           }}
-          onChangeText={(text) => setTextInput(text)}
+          onChangeText={(text) =>
+            setTextInput(
+              text
+                .toLowerCase()
+                .split("")
+                .map((c) =>
+                  String.fromCharCode(decode(encode(c.charCodeAt(0)))),
+                )
+                .join(""),
+            )
+          }
         />
         <View
           style={{
@@ -105,7 +116,12 @@ export default function Index() {
 
       <Text>{"\n"}Text:</Text>
       <Text>
-        {'"' + data.map((n) => String.fromCharCode(n)).join("") + '"\n'}
+        {'"' +
+          data
+            .slice(0, -1)
+            .map((n) => String.fromCharCode(decode(n)))
+            .join("") +
+          '"\n'}
       </Text>
 
       <Text>Data:</Text>
@@ -115,12 +131,7 @@ export default function Index() {
 
       <Text>Buffer:</Text>
       <Text>
-        {"{ " +
-          buffer
-            .map((b) => ((b % 1000) / 50) % 10)
-            .reverse()
-            .join("") +
-          " }\n"}
+        {"{ " + buffer.map((b) => (b % 1000) / 50).join(".") + " }\n"}
       </Text>
     </View>
   );
