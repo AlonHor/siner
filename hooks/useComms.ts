@@ -1,4 +1,4 @@
-import { useHamming1511 } from "@/hooks/useHamming1511";
+import { usePearsonHash } from "@/hooks/usePearsonHash";
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
 import { freqsToNumber, numberToFreqs } from "@/utils/bit";
@@ -36,7 +36,7 @@ export function useComms({
 
   const { playTone } = useSineWavePlayer();
   const { freq, setChannelFactor, channelFactor } = useUltrasonicFrequency();
-  const { encode, decode } = useHamming1511();
+  const { encode, decode } = usePearsonHash();
 
   const channelFactorRef = useRef<number>(0);
 
