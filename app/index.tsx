@@ -26,8 +26,15 @@ export default function Index() {
     ToastAndroid.show(message, ToastAndroid.SHORT);
   }
 
-  const { sendMessage, changeChannel, buffer, isMidSequence, isTransmitting } = useComms({
-    onDataChange: setData,
+  const {
+    sendMessage,
+    changeChannel,
+    bitBuffer,
+    isMidSequence,
+    isTransmitting,
+  } = useComms({
+    onDataBufferChange: setDataBuffer,
+    onMessage: onMessage,
   });
 
   useEffect(() => {
