@@ -61,7 +61,7 @@ export function useComms({
   }, [bitBuffer]);
 
   useEffect(() => {
-    isTransmittingRef.current = isTransmitting
+    isTransmittingRef.current = isTransmitting;
   }, [isTransmitting]);
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export function useComms({
   }, []);
 
   function onFreqHeld(f: number) {
-    if (isTransmittingRef.current) return;
+    // if (isTransmittingRef.current) return;
     if (f <= MAX_VALID_DATA_FREQ && f >= MIN_VALID_DATA_FREQ) {
       switch (f) {
         case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
@@ -217,7 +217,7 @@ export function useComms({
     }
     console.log("T: got SIGOKY, all good!");
 
-    setIsTransmitting(true);
+    setIsTransmitting(false);
   }
 
   function sendMessage(text: string) {
