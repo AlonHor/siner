@@ -1,6 +1,7 @@
 import { useSineWavePlayer } from "@/hooks/useSineWavePlayer";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
 import { freqsToNumber, numberToFreqs } from "@/utils/bit";
+import { calculateChecksum } from "@/utils/checksum";
 import {
   CHANNEL_BANDWIDTH,
   END_OF_NUMBER_BASE_FREQUENCY,
@@ -16,9 +17,11 @@ import { decode, encode } from "@/utils/numberConversion";
 import { useEffect, useRef, useState } from "react";
 
 export function useComms({
-  onDataChange,
+  onDataBufferChange: onDataBufferChange,
+  onMessage: onMessage,
 }: {
-  onDataChange: (data: number[]) => any;
+  onDataBufferChange: (data: number[]) => any;
+  onMessage: (message: string) => any;
 }) {
   const heldFreq = useRef<number | null>(null);
   const holdStart = useRef<number>(0);
@@ -36,9 +39,9 @@ export function useComms({
   const isSendError = useRef(true);
   const isRecieveError = useRef(false);
 
-  const [buffer, setBuffer] = useState<number[]>([]);
-  const bufferRef = useRef<number[]>([]);
-  const data = useRef<number[]>([]);
+  const [bitBuffer, setBitBuffer] = useState<number[]>([]);
+  const bitBufferRef = useRef<number[]>([]);
+  const dataBuffer = useRef<number[]>([]);
 
   const { playTone } = useSineWavePlayer();
   const { freq, setChannelFactor, channelFactor } = useUltrasonicFrequency();
@@ -54,8 +57,8 @@ export function useComms({
   }, [freq]);
 
   useEffect(() => {
-    bufferRef.current = buffer;
-  }, [buffer]);
+    bitBufferRef.current = bitBuffer;
+  }, [bitBuffer]);
 
   useEffect(() => {
     isTransmittingRef.current = isTransmitting
@@ -103,11 +106,12 @@ export function useComms({
           console.log("H: end seq!");
           setIsMidSequence(false);
 
-          const checkSum = data.current.at(-1);
-          const calculatedSum = data.current
-            .slice(0, -1)
-            .reduce((a, c) => a + c, 0);
+          const checkSum = dataBuffer.current.at(-1);
+          const calculatedSum = calculateChecksum(
+            dataBuffer.current.slice(0, -1),
+          );
 
+          // TODO: play SIGOKY/SIGERR only if recipient
           if (calculatedSum === checkSum) {
             // sum matches
             console.log("H: playing SIGOKY!");
@@ -115,6 +119,13 @@ export function useComms({
               [SIGOKY_BASE_FREQUENCY],
               channelFactorRef.current,
               PLAY_INTERVAL / 1000,
+            );
+
+            onMessage(
+              dataBuffer.current
+                .slice(0, -1)
+                .map((c) => String.fromCharCode(decode(c)))
+                .join(""),
             );
           } else {
             console.log(`H: playing SIGERR! (${calculatedSum} != ${checkSum})`);
@@ -129,25 +140,25 @@ export function useComms({
 
         case START_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
           console.log("H: start seq!");
-          data.current = [];
-          setBuffer([]);
-          onDataChange(data.current);
+          dataBuffer.current = [];
+          setBitBuffer([]);
+          onDataBufferChange(dataBuffer.current);
           setIsMidSequence(true);
           isRecieveError.current = false;
           break;
 
         case END_OF_NUMBER_BASE_FREQUENCY + channelFactorRef.current:
-          console.log(`H: parsing [${bufferRef.current.toString()}]`);
+          console.log(`H: parsing [${bitBufferRef.current.toString()}]`);
           const number = freqsToNumber(
-            bufferRef.current.map((t) => t - channelFactorRef.current),
+            bitBufferRef.current.map((t) => t - channelFactorRef.current),
           );
           console.log(
             `H: got ${number} (${String.fromCharCode(number != null ? decode(number) : 32)})`,
           );
-          setBuffer([]);
+          setBitBuffer([]);
           if (number !== 0) {
-            data.current.push(number);
-            onDataChange(data.current);
+            dataBuffer.current.push(number);
+            onDataBufferChange(dataBuffer.current);
           }
           break;
 
@@ -162,7 +173,7 @@ export function useComms({
           break;
 
         default:
-          if (isMidSequenceRef.current) setBuffer((b) => [...b, f]);
+          if (isMidSequenceRef.current) setBitBuffer((b) => [...b, f]);
           break;
       }
     }
@@ -172,16 +183,18 @@ export function useComms({
     setIsTransmitting(true);
 
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
-    let sum = 0;
+    const checksum = calculateChecksum(data);
     for (let number of data) {
-      sum += number;
       console.log(`T: will send ${number}`);
       baseSequence.push([
         ...numberToFreqs(number),
         END_OF_NUMBER_BASE_FREQUENCY,
       ]);
     }
-    baseSequence.push([...numberToFreqs(sum), END_OF_NUMBER_BASE_FREQUENCY]);
+    baseSequence.push([
+      ...numberToFreqs(checksum),
+      END_OF_NUMBER_BASE_FREQUENCY,
+    ]);
     baseSequence.push([END_OF_SEQUENCE_BASE_FREQUENCY]);
 
     isSendError.current = true;
@@ -199,9 +212,10 @@ export function useComms({
       // main loop catches SIGOKY and modifies isSendError.current to false
       await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 5));
 
-      if (!isSendError.current) console.log("T: got SIGOKY, all good!");
-      else console.log("T: resending due to SIGERR / no reply...");
+      if (isSendError.current)
+        console.log("T: resending due to SIGERR / no reply...");
     }
+    console.log("T: got SIGOKY, all good!");
 
     setIsTransmitting(true);
   }
@@ -217,8 +231,8 @@ export function useComms({
 
   return {
     sendMessage,
-    data,
-    buffer,
+    dataBuffer,
+    bitBuffer,
     isMidSequence,
     isTransmitting,
     changeChannel,

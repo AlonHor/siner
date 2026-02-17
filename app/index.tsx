@@ -1,15 +1,30 @@
+import "@/styles/global.css";
+
 import { useComms } from "@/hooks/useComms";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
 import { decode, encode } from "@/utils/numberConversion";
 import React, { useEffect, useState } from "react";
-import { Button, LogBox, Text, TextInput, View } from "react-native";
+import {
+  Button,
+  LogBox,
+  Text,
+  TextInput,
+  ToastAndroid,
+  View,
+} from "react-native";
+import LoadingIcon from "./LoadingIcon";
 
 LogBox.ignoreLogs(["Open debugger to view warnings."]);
 
 export default function Index() {
   const [textInput, setTextInput] = useState("");
-  const [data, setData] = useState<number[]>([]);
+  const [dataBuffer, setDataBuffer] = useState<number[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<number>(0);
+
+  function onMessage(message: string) {
+    console.log(`H: message received: '${message}'`);
+    ToastAndroid.show(message, ToastAndroid.SHORT);
+  }
 
   const { sendMessage, changeChannel, buffer, isMidSequence, isTransmitting } = useComms({
     onDataChange: setData,
@@ -73,7 +88,6 @@ export default function Index() {
           <Button title="4" onPress={() => setSelectedChannel(4)} />
         </View>
       </View>
-
       <View style={{ display: "flex", flexDirection: "row", gap: 5 }}>
         <TextInput
           value={textInput}
@@ -98,49 +112,30 @@ export default function Index() {
             )
           }
         />
-        <View
-          style={{
-            top: 25 * 0.75,
-            width: 25,
-            height: 25,
-            borderRadius: 25,
-            backgroundColor: isMidSequence ? "green" : "grey",
-          }}
-        />
-        <View
-          style={{
-            top: 25 * 0.75,
-            width: 25,
-            height: 25,
-            borderRadius: 25,
-            backgroundColor: isTransmitting ? "red" : "grey",
-          }}
-        />
+        <LoadingIcon isLoading={isTransmitting} />
+        <LoadingIcon isLoading={isMidSequence} />
       </View>
+      <Text>&nbsp;</Text>
       <Button onPress={() => sendMessage(textInput)} title="Send" />
-
       <Text>
         {"\n"}Ch: {selectedChannel}, Freq: {freq}
       </Text>
-
       <Text>{"\n"}Text:</Text>
       <Text>
         {'"' +
-          data
+          dataBuffer
             .slice(0, -1)
             .map((n) => String.fromCharCode(decode(n)))
             .join("") +
           '"\n'}
       </Text>
-
       <Text>Data:</Text>
       <Text style={{ marginHorizontal: 30 }}>
-        {"[" + data.join(", ") + "]\n"}
+        {"[" + dataBuffer.join(", ") + "]\n"}
       </Text>
-
       <Text>Buffer:</Text>
       <Text>
-        {"{ " + buffer.map((b) => (b % 1000) / 50).join(".") + " }\n"}
+        {"{ " + bitBuffer.map((b) => (b % 1000) / 50).join(".") + " }\n"}
       </Text>
     </View>
   );
