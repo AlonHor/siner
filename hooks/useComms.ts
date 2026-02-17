@@ -30,8 +30,12 @@ export function useComms({
 
   const INITIAL_DELAY = 0.5 * PLAY_INTERVAL;
 
+  const [isTransmitting, setIsTransmitting] = useState(false);
+  const isTransmittingRef = useRef(false);
+
   const [isMidSequence, setIsMidSequence] = useState(false);
   const isMidSequenceRef = useRef(false);
+
   const isSendError = useRef(true);
   const isRecieveError = useRef(false);
 
@@ -55,6 +59,10 @@ export function useComms({
   useEffect(() => {
     bitBufferRef.current = bitBuffer;
   }, [bitBuffer]);
+
+  useEffect(() => {
+    isTransmittingRef.current = isTransmitting
+  }, [isTransmitting]);
 
   useEffect(() => {
     isMidSequenceRef.current = isMidSequence;
@@ -91,6 +99,7 @@ export function useComms({
   }, []);
 
   function onFreqHeld(f: number) {
+    if (isTransmittingRef.current) return;
     if (f <= MAX_VALID_DATA_FREQ && f >= MIN_VALID_DATA_FREQ) {
       switch (f) {
         case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
@@ -171,6 +180,8 @@ export function useComms({
   }
 
   async function transmitData(data: number[]) {
+    setIsTransmitting(true);
+
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
     const checksum = calculateChecksum(data);
     for (let number of data) {
@@ -205,6 +216,8 @@ export function useComms({
         console.log("T: resending due to SIGERR / no reply...");
     }
     console.log("T: got SIGOKY, all good!");
+
+    setIsTransmitting(true);
   }
 
   function sendMessage(text: string) {
@@ -221,6 +234,7 @@ export function useComms({
     dataBuffer,
     bitBuffer,
     isMidSequence,
+    isTransmitting,
     changeChannel,
   };
 }

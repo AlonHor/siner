@@ -26,9 +26,8 @@ export default function Index() {
     ToastAndroid.show(message, ToastAndroid.SHORT);
   }
 
-  const { sendMessage, changeChannel, bitBuffer, isMidSequence } = useComms({
-    onDataBufferChange: setDataBuffer,
-    onMessage: onMessage,
+  const { sendMessage, changeChannel, buffer, isMidSequence, isTransmitting } = useComms({
+    onDataChange: setData,
   });
 
   useEffect(() => {
@@ -113,6 +112,7 @@ export default function Index() {
             )
           }
         />
+        <LoadingIcon isLoading={isTransmitting} />
         <LoadingIcon isLoading={isMidSequence} />
       </View>
       <Text>&nbsp;</Text>
