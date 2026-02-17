@@ -11,7 +11,7 @@ export default function Index() {
   const [data, setData] = useState<number[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<number>(0);
 
-  const { sendMessage, changeChannel, buffer, isMidSequence } = useComms({
+  const { sendMessage, changeChannel, buffer, isMidSequence, isTransmitting } = useComms({
     onDataChange: setData,
   });
 
@@ -105,6 +105,15 @@ export default function Index() {
             height: 25,
             borderRadius: 25,
             backgroundColor: isMidSequence ? "green" : "grey",
+          }}
+        />
+        <View
+          style={{
+            top: 25 * 0.75,
+            width: 25,
+            height: 25,
+            borderRadius: 25,
+            backgroundColor: isTransmitting ? "red" : "grey",
           }}
         />
       </View>
