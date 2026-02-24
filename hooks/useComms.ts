@@ -99,21 +99,22 @@ export function useComms({
   }, []);
 
   function onFreqHeld(f: number) {
-    // if (isTransmittingRef.current) return;
+    if (isTransmittingRef.current) return;
     if (f <= MAX_VALID_DATA_FREQ && f >= MIN_VALID_DATA_FREQ) {
       switch (f) {
         case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
+          if (!isMidSequenceRef.current) return;
+
           console.log("H: end seq!");
           setIsMidSequence(false);
 
-          const checkSum = dataBuffer.current.at(-1);
-          const calculatedSum = calculateChecksum(
+          const providedChecksum = dataBuffer.current.at(-1);
+          const calculatedChecksum = calculateChecksum(
             dataBuffer.current.slice(0, -1),
           );
 
-          // TODO: play SIGOKY/SIGERR only if recipient
-          if (calculatedSum === checkSum) {
-            // sum matches
+          if (calculatedChecksum === providedChecksum) {
+            // checksum matches
             console.log("H: playing SIGOKY!");
             playTone(
               [SIGOKY_BASE_FREQUENCY],
@@ -128,7 +129,9 @@ export function useComms({
                 .join(""),
             );
           } else {
-            console.log(`H: playing SIGERR! (${calculatedSum} != ${checkSum})`);
+            console.log(
+              `H: playing SIGERR! (${calculatedChecksum} != ${providedChecksum})`,
+            );
             playTone(
               [SIGERR_BASE_FREQUENCY],
               channelFactorRef.current,

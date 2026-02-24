@@ -119,8 +119,8 @@ export default function Index() {
             )
           }
         />
-        <LoadingIcon isLoading={isTransmitting} />
-        <LoadingIcon isLoading={isMidSequence} />
+        <LoadingIcon isLoading={isTransmitting} text="T" />
+        <LoadingIcon isLoading={isMidSequence} text="R" />
       </View>
       <Text>&nbsp;</Text>
       <Button onPress={() => sendMessage(textInput)} title="Send" />
