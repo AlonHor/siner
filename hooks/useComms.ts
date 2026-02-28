@@ -151,6 +151,8 @@ export function useComms({
           break;
 
         case END_OF_NUMBER_BASE_FREQUENCY + channelFactorRef.current:
+          if (!isMidSequenceRef.current) return;
+
           console.log(`H: parsing [${bitBufferRef.current.toString()}]`);
           const number = freqsToNumber(
             bitBufferRef.current.map((t) => t - channelFactorRef.current),
@@ -166,11 +168,15 @@ export function useComms({
           break;
 
         case SIGERR_BASE_FREQUENCY + channelFactorRef.current:
+          if (!isTransmittingRef.current) return;
+
           console.log("T: detected SIGERR, forwarding...");
           isSendError.current = true;
           break;
 
         case SIGOKY_BASE_FREQUENCY + channelFactorRef.current:
+          if (!isTransmittingRef.current) return;
+
           console.log("T: detected SIGOKY, forwarding...");
           isSendError.current = false;
           break;
@@ -201,7 +207,9 @@ export function useComms({
     baseSequence.push([END_OF_SEQUENCE_BASE_FREQUENCY]);
 
     isSendError.current = true;
+    let errorCount = 0;
     while (isSendError.current) {
+      errorCount++;
       isSendError.current = true;
       for (const data of baseSequence) {
         console.log(
@@ -215,8 +223,15 @@ export function useComms({
       // main loop catches SIGOKY and modifies isSendError.current to false
       await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 5));
 
+      if (errorCount > 5) {
+        isSendError.current = false;
+        console.log("T: gave up on resending.");
+      }
+
       if (isSendError.current)
-        console.log("T: resending due to SIGERR / no reply...");
+        console.log(
+          `T: resending due to SIGERR / no reply (${errorCount}/5)...`,
+        );
     }
     console.log("T: got SIGOKY, all good!");
 

@@ -2,28 +2,26 @@ import "@/styles/global.css";
 
 import { useComms } from "@/hooks/useComms";
 import { useUltrasonicFrequency } from "@/hooks/useUltrasonicFrequency";
-import { decode, encode } from "@/utils/numberConversion";
-import React, { useEffect, useState } from "react";
-import {
-  Button,
-  LogBox,
-  Text,
-  TextInput,
-  ToastAndroid,
-  View,
-} from "react-native";
+import { decode } from "@/utils/numberConversion";
+import React, { useEffect, useRef, useState } from "react";
+import { Button, LogBox, Text, View } from "react-native";
 import LoadingIcon from "./LoadingIcon";
+import TicTacToe, { TicTacToeHandle } from "./games/TicTacToe";
 
 LogBox.ignoreLogs(["Open debugger to view warnings."]);
 
 export default function Index() {
-  const [textInput, setTextInput] = useState("");
   const [dataBuffer, setDataBuffer] = useState<number[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<number>(0);
+  const [side, setSide] = useState<"x" | "o">("x");
+
+  const boardRef = useRef<TicTacToeHandle>(null);
 
   function onMessage(message: string) {
     console.log(`H: message received: '${message}'`);
-    ToastAndroid.show(message, ToastAndroid.SHORT);
+    // ToastAndroid.show(message, ToastAndroid.SHORT);
+
+    boardRef.current?.onMessage(message);
   }
 
   const {
@@ -95,35 +93,41 @@ export default function Index() {
           <Button title="4" onPress={() => setSelectedChannel(4)} />
         </View>
       </View>
-      <View style={{ display: "flex", flexDirection: "row", gap: 5 }}>
-        <TextInput
-          value={textInput}
+      <View
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: 5,
+        }}
+      >
+        <View
           style={{
-            width: 240,
-            margin: 10,
-            padding: 10,
-            borderWidth: 1,
-            backgroundColor: "#222",
-            color: "white",
-            borderRadius: 10,
+            backgroundColor: side === "x" ? "black" : "transparent",
+            padding: 5,
           }}
-          onChangeText={(text) =>
-            setTextInput(
-              text
-                .toLowerCase()
-                .split("")
-                .map((c) =>
-                  String.fromCharCode(decode(encode(c.charCodeAt(0)))),
-                )
-                .join(""),
-            )
-          }
-        />
+        >
+          <Button title="X" onPress={() => setSide("x")} />
+        </View>
+        <View
+          style={{
+            backgroundColor: side === "o" ? "black" : "transparent",
+            padding: 5,
+          }}
+        >
+          <Button title="O" onPress={() => setSide("o")} />
+        </View>
+      </View>
+      <View
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: 5,
+        }}
+      >
         <LoadingIcon isLoading={isTransmitting} text="T" />
         <LoadingIcon isLoading={isMidSequence} text="R" />
       </View>
       <Text>&nbsp;</Text>
-      <Button onPress={() => sendMessage(textInput)} title="Send" />
       <Text>
         {"\n"}Ch: {selectedChannel}, Freq: {freq}
       </Text>
@@ -144,6 +148,7 @@ export default function Index() {
       <Text>
         {"{ " + bitBuffer.map((b) => (b % 1000) / 50).join(".") + " }\n"}
       </Text>
+      <TicTacToe side={side} sendMessage={sendMessage} ref={boardRef} />
     </View>
   );
 }

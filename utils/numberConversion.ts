@@ -6,10 +6,10 @@ type Range = {
 
 const ENCODE_RANGES: Range[] = [
   // a-z -> 1-26
-  { inMin: 97, inMax: 122, outMin: 1 },
+  { inMin: 97, inMax: 122, outMin: 11 },
 
   // 0-9 -> 27-36
-  { inMin: 48, inMax: 57, outMin: 27 },
+  { inMin: 48, inMax: 57, outMin: 1 },
 ];
 
 const ENCODE_SINGLE = new Map<number, number>([
