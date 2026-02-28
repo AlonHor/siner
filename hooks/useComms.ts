@@ -19,9 +19,11 @@ import { useEffect, useRef, useState } from "react";
 export function useComms({
   onDataBufferChange: onDataBufferChange,
   onMessage: onMessage,
+  onGiveUp: onGiveUp,
 }: {
   onDataBufferChange: (data: number[]) => any;
   onMessage: (message: string) => any;
+  onGiveUp: () => any;
 }) {
   const heldFreq = useRef<number | null>(null);
   const holdStart = useRef<number>(0);
@@ -190,6 +192,7 @@ export function useComms({
 
   async function transmitData(data: number[]) {
     setIsTransmitting(true);
+    setIsMidSequence(false);
 
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
     const checksum = calculateChecksum(data);
@@ -224,8 +227,9 @@ export function useComms({
       await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 5));
 
       if (errorCount > 5) {
-        isSendError.current = false;
         console.log("T: gave up on resending.");
+        isSendError.current = false;
+        onGiveUp();
       }
 
       if (isSendError.current)

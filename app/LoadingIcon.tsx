@@ -1,3 +1,4 @@
+import { PLAY_INTERVAL } from "@/utils/config";
 import React, { useEffect } from "react";
 import { Text } from "react-native";
 import Animated, {
@@ -10,16 +11,18 @@ import Animated, {
 export default function LoadingIcon({
   isLoading,
   text,
+  color,
 }: {
   isLoading: boolean;
   text: string;
+  color: string;
 }) {
   const translateY = useSharedValue(0);
 
   useEffect(() => {
     if (isLoading) {
       translateY.value = withRepeat(
-        withTiming(-8, { duration: 400 }),
+        withTiming(-8, { duration: PLAY_INTERVAL }),
         -1,
         true,
       );
@@ -42,12 +45,14 @@ export default function LoadingIcon({
           borderRadius: 10,
           justifyContent: "center",
           alignItems: "center",
-          backgroundColor: isLoading ? "#16a34a" : "#9ca3af",
+          backgroundColor: isLoading ? color : "#9ca3af",
         },
         animatedStyle,
       ]}
     >
-      <Text style={{ fontSize: 18, color: "black" }}>{text}</Text>
+      <Text style={{ fontSize: 18, color: isLoading ? "white" : "black" }}>
+        {text}
+      </Text>
     </Animated.View>
   );
 }

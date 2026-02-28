@@ -34,6 +34,7 @@ function Block({
 
 export type TicTacToeHandle = {
   onMessage: (message: string) => void;
+  onGiveUp: () => void;
 };
 
 const TicTacToe = forwardRef<
@@ -44,6 +45,7 @@ const TicTacToe = forwardRef<
   }
 >(function TicTacToe({ side, sendMessage }, ref) {
   const [board, setBoard] = useState<("" | "x" | "o")[]>(Array(9).fill(""));
+  const [lastMove, setLastMove] = useState<number>(0);
 
   useEffect(() => {
     setBoard(Array(9).fill(""));
@@ -89,7 +91,9 @@ const TicTacToe = forwardRef<
       return nb;
     });
 
-    sendMessage(`${side}${box}`);
+    const move = `${side}${box}`;
+    sendMessage(move);
+    setLastMove(box);
   }
 
   useImperativeHandle(ref, () => ({
@@ -102,6 +106,15 @@ const TicTacToe = forwardRef<
         if (b[box] !== "") return b;
         const nb = [...b];
         nb[box] = side as "x" | "o";
+        return nb;
+      });
+    },
+
+    onGiveUp() {
+      setBoard((b) => {
+        if (b[lastMove] === "") return b;
+        const nb = [...b];
+        nb[lastMove] = "";
         return nb;
       });
     },

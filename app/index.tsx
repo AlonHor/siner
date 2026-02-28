@@ -10,18 +10,30 @@ import TicTacToe, { TicTacToeHandle } from "./games/TicTacToe";
 
 LogBox.ignoreLogs(["Open debugger to view warnings."]);
 
+const DEBUG = false;
+
 export default function Index() {
   const [dataBuffer, setDataBuffer] = useState<number[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<number>(0);
   const [side, setSide] = useState<"x" | "o">("x");
 
-  const boardRef = useRef<TicTacToeHandle>(null);
+  const ticTacToeRef = useRef<TicTacToeHandle>(null);
+
+  const gameRefs: React.RefObject<any | null>[] = [ticTacToeRef];
 
   function onMessage(message: string) {
     console.log(`H: message received: '${message}'`);
     // ToastAndroid.show(message, ToastAndroid.SHORT);
 
-    boardRef.current?.onMessage(message);
+    gameRefs.forEach((gr) => {
+      gr.current?.onMessage(message);
+    });
+  }
+
+  function onGiveUp() {
+    gameRefs.forEach((gr) => {
+      gr.current?.onGiveUp();
+    });
   }
 
   const {
@@ -33,6 +45,7 @@ export default function Index() {
   } = useComms({
     onDataBufferChange: setDataBuffer,
     onMessage: onMessage,
+    onGiveUp: onGiveUp,
   });
 
   useEffect(() => {
@@ -124,31 +137,43 @@ export default function Index() {
           gap: 5,
         }}
       >
-        <LoadingIcon isLoading={isTransmitting} text="T" />
-        <LoadingIcon isLoading={isMidSequence} text="R" />
+        <LoadingIcon isLoading={isTransmitting} text="T" color="#16a34a" />
+        <LoadingIcon isLoading={isMidSequence} text="R" color="#aa4" />
       </View>
       <Text>&nbsp;</Text>
+      {DEBUG && (
+        <>
+          <Text>
+            {"\n"}Ch: {selectedChannel}, Freq: {freq}
+          </Text>
+          <Text>{"\n"}Text:</Text>
+          <Text>
+            {'"' +
+              dataBuffer
+                .slice(0, -1)
+                .map((n) => String.fromCharCode(decode(n)))
+                .join("") +
+              '"\n'}
+          </Text>
+          <Text>Data:</Text>
+          <Text style={{ marginHorizontal: 30 }}>
+            {"[" + dataBuffer.join(", ") + "]\n"}
+          </Text>
+          <Text>Buffer:</Text>
+          <Text>
+            {"{ " + bitBuffer.map((b) => (b % 1000) / 50).join(".") + " }\n"}
+          </Text>
+        </>
+      )}
       <Text>
-        {"\n"}Ch: {selectedChannel}, Freq: {freq}
+        {"\n"}
+        {isTransmitting
+          ? "Sending..."
+          : isMidSequence
+            ? "Receiving"
+            : "All good!"}
       </Text>
-      <Text>{"\n"}Text:</Text>
-      <Text>
-        {'"' +
-          dataBuffer
-            .slice(0, -1)
-            .map((n) => String.fromCharCode(decode(n)))
-            .join("") +
-          '"\n'}
-      </Text>
-      <Text>Data:</Text>
-      <Text style={{ marginHorizontal: 30 }}>
-        {"[" + dataBuffer.join(", ") + "]\n"}
-      </Text>
-      <Text>Buffer:</Text>
-      <Text>
-        {"{ " + bitBuffer.map((b) => (b % 1000) / 50).join(".") + " }\n"}
-      </Text>
-      <TicTacToe side={side} sendMessage={sendMessage} ref={boardRef} />
+      <TicTacToe side={side} sendMessage={sendMessage} ref={ticTacToeRef} />
     </View>
   );
 }
