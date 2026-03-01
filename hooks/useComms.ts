@@ -191,7 +191,6 @@ export function useComms({
   }
 
   async function transmitData(data: number[]) {
-    setIsTransmitting(true);
     setIsMidSequence(false);
 
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
@@ -218,8 +217,13 @@ export function useComms({
         console.log(
           `T: sending [${data.map((t) => t + channelFactor).toString()}] {+${channelFactor}}`,
         );
+
+        setIsTransmitting(true);
+
         playTone(data, channelFactor, PLAY_INTERVAL / 1000);
         await new Promise((r) => setTimeout(r, PLAY_INTERVAL * data.length));
+
+        setIsTransmitting(false);
       }
       console.log("T: finished sending all data, listening for errors...");
 
@@ -238,8 +242,6 @@ export function useComms({
         );
     }
     console.log("T: got SIGOKY, all good!");
-
-    setIsTransmitting(false);
   }
 
   function sendMessage(text: string) {
