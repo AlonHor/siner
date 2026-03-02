@@ -121,7 +121,7 @@ export function useComms({
             playTone(
               [SIGOKY_BASE_FREQUENCY],
               channelFactorRef.current,
-              PLAY_INTERVAL / 1000,
+              (PLAY_INTERVAL * 5) / 1000,
             );
 
             onMessage(
@@ -137,7 +137,7 @@ export function useComms({
             playTone(
               [SIGERR_BASE_FREQUENCY],
               channelFactorRef.current,
-              PLAY_INTERVAL / 1000,
+              (PLAY_INTERVAL * 5) / 1000,
             );
           }
 
