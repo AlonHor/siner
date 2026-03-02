@@ -170,15 +170,11 @@ export function useComms({
           break;
 
         case SIGERR_BASE_FREQUENCY + channelFactorRef.current:
-          if (!isTransmittingRef.current) return;
-
           console.log("T: detected SIGERR, forwarding...");
           isSendError.current = true;
           break;
 
         case SIGOKY_BASE_FREQUENCY + channelFactorRef.current:
-          if (!isTransmittingRef.current) return;
-
           console.log("T: detected SIGOKY, forwarding...");
           isSendError.current = false;
           break;
