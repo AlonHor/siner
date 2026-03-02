@@ -38,6 +38,9 @@ export function useComms({
   const [isMidSequence, setIsMidSequence] = useState(false);
   const isMidSequenceRef = useRef(false);
 
+  const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
+
   const isSendError = useRef(true);
   const isRecieveError = useRef(false);
 
@@ -71,6 +74,10 @@ export function useComms({
   }, [isMidSequence]);
 
   useEffect(() => {
+    isSyncingRef.current = isSyncing;
+  }, [isSyncing]);
+
+  useEffect(() => {
     channelFactorRef.current = channelFactor;
   }, [channelFactor]);
 
@@ -102,6 +109,7 @@ export function useComms({
 
   function onFreqHeld(f: number) {
     if (isTransmittingRef.current) return;
+
     if (f <= MAX_VALID_DATA_FREQ && f >= MIN_VALID_DATA_FREQ) {
       switch (f) {
         case END_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
@@ -109,6 +117,7 @@ export function useComms({
 
           console.log("H: end seq!");
           setIsMidSequence(false);
+          setIsSyncing(false);
 
           const providedChecksum = dataBuffer.current.at(-1);
           const calculatedChecksum = calculateChecksum(
@@ -149,6 +158,7 @@ export function useComms({
           setBitBuffer([]);
           onDataBufferChange(dataBuffer.current);
           setIsMidSequence(true);
+          setIsSyncing(true);
           isRecieveError.current = false;
           break;
 
@@ -170,11 +180,15 @@ export function useComms({
           break;
 
         case SIGERR_BASE_FREQUENCY + channelFactorRef.current:
+          if (!isSyncingRef.current) return;
+
           console.log("T: detected SIGERR, forwarding...");
           isSendError.current = true;
           break;
 
         case SIGOKY_BASE_FREQUENCY + channelFactorRef.current:
+          if (!isSyncingRef.current) return;
+
           console.log("T: detected SIGOKY, forwarding...");
           isSendError.current = false;
           break;
@@ -187,6 +201,7 @@ export function useComms({
   }
 
   async function transmitData(data: number[]) {
+    setIsSyncing(true);
     setIsMidSequence(false);
 
     const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
@@ -238,6 +253,7 @@ export function useComms({
         );
     }
     console.log("T: got SIGOKY, all good!");
+    setIsSyncing(false);
   }
 
   function sendMessage(text: string) {
@@ -255,6 +271,9 @@ export function useComms({
     bitBuffer,
     isMidSequence,
     isTransmitting,
+    isSyncing,
+    freq,
+    channelFactor,
     changeChannel,
   };
 }
