@@ -108,7 +108,7 @@ export function useComms({
   }, []);
 
   function onFreqHeld(f: number) {
-    if (isTransmittingRef.current) return;
+    // if (isTransmittingRef.current) return;
 
     if (f <= MAX_VALID_DATA_FREQ && f >= MIN_VALID_DATA_FREQ) {
       switch (f) {
@@ -153,6 +153,14 @@ export function useComms({
           break;
 
         case START_OF_SEQUENCE_BASE_FREQUENCY + channelFactorRef.current:
+          if (
+            !(
+              (isMidSequenceRef.current && bitBufferRef.current.length !== 0) ||
+              !isMidSequenceRef.current
+            )
+          )
+            return;
+
           console.log("H: start seq!");
           dataBuffer.current = [];
           setBitBuffer([]);
@@ -201,10 +209,13 @@ export function useComms({
   }
 
   async function transmitData(data: number[]) {
+    const MAX_RESEND_ATTEMPTS = 10;
+
     setIsSyncing(true);
     setIsMidSequence(false);
 
-    const baseSequence = [[START_OF_SEQUENCE_BASE_FREQUENCY]];
+    const baseSequence = [Array(5).fill(START_OF_SEQUENCE_BASE_FREQUENCY)];
+
     const checksum = calculateChecksum(data);
     for (let number of data) {
       console.log(`T: will send ${number}`);
@@ -213,17 +224,20 @@ export function useComms({
         END_OF_NUMBER_BASE_FREQUENCY,
       ]);
     }
+
     baseSequence.push([
       ...numberToFreqs(checksum),
       END_OF_NUMBER_BASE_FREQUENCY,
     ]);
-    baseSequence.push([END_OF_SEQUENCE_BASE_FREQUENCY]);
+
+    baseSequence.push(Array(5).fill(END_OF_SEQUENCE_BASE_FREQUENCY));
 
     isSendError.current = true;
     let errorCount = 0;
     while (isSendError.current) {
       errorCount++;
       isSendError.current = true;
+
       for (const data of baseSequence) {
         console.log(
           `T: sending [${data.map((t) => t + channelFactor).toString()}] {+${channelFactor}}`,
@@ -241,7 +255,7 @@ export function useComms({
       // main loop catches SIGOKY and modifies isSendError.current to false
       await new Promise((r) => setTimeout(r, PLAY_INTERVAL * 5));
 
-      if (errorCount > 5) {
+      if (errorCount > MAX_RESEND_ATTEMPTS) {
         console.log("T: gave up on resending.");
         isSendError.current = false;
         onGiveUp();
@@ -249,7 +263,7 @@ export function useComms({
 
       if (isSendError.current)
         console.log(
-          `T: resending due to SIGERR / no reply (${errorCount}/5)...`,
+          `T: resending due to SIGERR / no reply (${errorCount}/${MAX_RESEND_ATTEMPTS})...`,
         );
     }
     console.log("T: got SIGOKY, all good!");

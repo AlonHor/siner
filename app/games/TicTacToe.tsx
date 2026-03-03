@@ -91,7 +91,7 @@ const TicTacToe = forwardRef<
       return nb;
     });
 
-    const move = `${side}${box}`;
+    const move = `${side === "x" ? "a" : "b"}${box}`;
     sendMessage(move);
     setLastMove(box);
   }
@@ -101,11 +101,11 @@ const TicTacToe = forwardRef<
       const side = message[0];
       const box = Number.parseInt(message[1]);
 
-      if (side !== "x" && side !== "o") return;
+      if (side !== "a" && side !== "b") return;
       setBoard((b) => {
         if (b[box] !== "") return b;
         const nb = [...b];
-        nb[box] = side as "x" | "o";
+        nb[box] = side === "a" ? "x" : "o";
         return nb;
       });
     },
