@@ -1,3 +1,4 @@
+import { GameOutcome, GameType } from "@/utils/gamesHistory";
 import React, {
   forwardRef,
   useEffect,
@@ -37,13 +38,16 @@ export type TicTacToeHandle = {
   onGiveUp: () => void;
 };
 
+const GAME_TYPE: GameType = "TicTacToe";
+
 const TicTacToe = forwardRef<
   TicTacToeHandle,
   {
     side: "x" | "o";
     sendMessage: (text: string) => void;
+    onGameFinish: (gameType: GameType, outcome: GameOutcome) => void;
   }
->(function TicTacToe({ side, sendMessage }, ref) {
+>(function TicTacToe({ side, sendMessage, onGameFinish }, ref) {
   const [board, setBoard] = useState<("" | "x" | "o")[]>(Array(9).fill(""));
   const [lastMove, setLastMove] = useState<number>(0);
 
@@ -74,11 +78,23 @@ const TicTacToe = forwardRef<
     };
 
     const winner = checkWin(board);
-    if (!winner) return;
+    if (!winner) {
+      if (board.filter((b) => b === "").length === 0) {
+        // if board is full
+        ToastAndroid.show("it's a draw!", ToastAndroid.SHORT);
+        onGameFinish(GAME_TYPE, "draw");
+      }
+      return;
+    }
 
-    if (winner === side) ToastAndroid.show("win!", ToastAndroid.SHORT);
-    else ToastAndroid.show("lose...", ToastAndroid.SHORT);
-  }, [board, side]);
+    if (winner === side) {
+      ToastAndroid.show("you won!", ToastAndroid.SHORT);
+      onGameFinish(GAME_TYPE, "win");
+    } else {
+      ToastAndroid.show("you lost!", ToastAndroid.SHORT);
+      onGameFinish(GAME_TYPE, "lose");
+    }
+  }, [board, side, onGameFinish]);
 
   function onBoxSelect(box: number) {
     const turn = board.filter((b) => b !== "").length % 2 === 0 ? "x" : "o";

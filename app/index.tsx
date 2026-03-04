@@ -6,6 +6,13 @@ import {
   PLAY_INTERVAL,
   TOP_BASE_FREQUENCY,
 } from "@/utils/config";
+import {
+  addGameHistory,
+  Game,
+  GameOutcome,
+  GameType,
+  loadGamesHistory,
+} from "@/utils/gamesHistory";
 import { decode } from "@/utils/numberConversion";
 import React, { useEffect, useRef, useState } from "react";
 import { Button, LogBox, Text, View } from "react-native";
@@ -30,12 +37,21 @@ export default function Index() {
 
   const gameRefs: React.RefObject<any | null>[] = [ticTacToeRef];
 
+  const gameHistoryRef = useRef<Game[]>([]);
+
   function onMessage(message: string) {
     console.log(`H: message received: '${message}'`);
     // ToastAndroid.show(message, ToastAndroid.SHORT);
 
     gameRefs.forEach((gr) => {
       gr.current?.onMessage(message);
+    });
+  }
+
+  async function onGameFinish(gameType: GameType, outcome: GameOutcome) {
+    await addGameHistory(gameHistoryRef, {
+      gameType: gameType,
+      outcome: outcome,
     });
   }
 
@@ -59,6 +75,15 @@ export default function Index() {
     onMessage: onMessage,
     onGiveUp: onGiveUp,
   });
+
+  useEffect(() => {
+    (async () => {
+      await loadGamesHistory(gameHistoryRef);
+      console.log(
+        `games history loaded: ${JSON.stringify(gameHistoryRef.current)}`,
+      );
+    })();
+  }, []);
 
   useEffect(() => {
     changeChannel(selectedChannel);
@@ -201,7 +226,12 @@ export default function Index() {
               ? "Awaiting Signal..."
               : "In Sync"}
       </Text>
-      <TicTacToe side={side} sendMessage={sendMessage} ref={ticTacToeRef} />
+      <TicTacToe
+        side={side}
+        sendMessage={sendMessage}
+        onGameFinish={onGameFinish}
+        ref={ticTacToeRef}
+      />
       <View style={{ marginTop: 20, width: "90%" }}>
         <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
           Frequency Visualization
