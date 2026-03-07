@@ -11,7 +11,7 @@ export type Game = {
   outcome: GameOutcome;
 };
 
-export async function loadGamesHistory(ref: React.RefObject<Game[]>) {
+export async function loadGameHistory(ref: React.RefObject<Game[]>) {
   let gamesStorage = await getStorage("games");
   if (gamesStorage === null) gamesStorage = "[]";
 
@@ -27,12 +27,14 @@ export async function syncLocalGameHistory(ref: React.RefObject<Game[]>) {
   await setStorage("games", JSON.stringify(ref.current));
 }
 
-export function syncNetworkGameHistory(ref: React.RefObject<Game[]>) {
-  sendSocket(JSON.stringify(ref.current));
+export async function syncNetworkGameHistory(ref: React.RefObject<Game[]>) {
+  console.log(
+    `sync response: ${await sendSocket("games", JSON.stringify(ref.current))}`,
+  );
 }
 
 export async function addGameHistory(ref: React.RefObject<Game[]>, game: Game) {
   ref.current.push(game);
   await syncLocalGameHistory(ref);
-  syncNetworkGameHistory(ref);
+  await syncNetworkGameHistory(ref);
 }
