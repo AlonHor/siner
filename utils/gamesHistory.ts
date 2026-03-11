@@ -9,6 +9,7 @@ export type GameType = "TicTacToe";
 export type Game = {
   gameType: GameType;
   outcome: GameOutcome;
+  playedAt: Date;
 };
 
 export async function loadGameHistory(ref: React.RefObject<Game[]>) {

@@ -12,7 +12,6 @@ import {
   GameOutcome,
   GameType,
   loadGameHistory,
-  syncNetworkGameHistory,
 } from "@/utils/gamesHistory";
 import { decode } from "@/utils/numberConversion";
 import { getStorage } from "@/utils/storage";
@@ -58,6 +57,7 @@ export default function Index() {
     await addGameHistory(gameHistoryRef, {
       gameType: gameType,
       outcome: outcome,
+      playedAt: new Date(Date.now()),
     });
   }
 
@@ -101,7 +101,6 @@ export default function Index() {
 
   useEffect(() => {
     changeChannel(selectedChannel);
-    syncNetworkGameHistory(gameHistoryRef);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChannel]);
 
