@@ -108,7 +108,7 @@ export function useComms({
   }, []);
 
   function onFreqHeld(f: number) {
-    // if (isTransmittingRef.current) return;
+    if (isTransmittingRef.current) return;
 
     if (f <= MAX_VALID_DATA_FREQ && f >= MIN_VALID_DATA_FREQ) {
       switch (f) {

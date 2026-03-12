@@ -29,9 +29,11 @@ export async function syncLocalGameHistory(ref: React.RefObject<Game[]>) {
 }
 
 export async function syncNetworkGameHistory(ref: React.RefObject<Game[]>) {
-  console.log(
-    `sync response: ${await sendSocket("games", JSON.stringify(ref.current))}`,
-  );
+  const res = await sendSocket("games", "POST", ref.current);
+  if (res && res.ok) {
+    ref.current = [];
+    syncLocalGameHistory(ref);
+  }
 }
 
 export async function addGameHistory(ref: React.RefObject<Game[]>, game: Game) {

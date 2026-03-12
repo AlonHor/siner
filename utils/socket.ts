@@ -1,28 +1,33 @@
-import { getStorage } from "./storage";
+import { getStorage, removeStorage } from "./storage";
 
 const IP = "192.168.1.122";
 const PORT = 9000;
 
 export async function sendSocket(
   endpoint: string,
-  message: string,
-): Promise<string> {
-  console.log(`sending ${message}`);
+  method: string,
+  data: object | undefined,
+): Promise<Response | null> {
   const token = await getStorage("token");
 
   const headers: any = { "Content-Type": "application/json" };
   if (token != null) headers["Authorization"] = "Bearer " + token;
 
-  try {
-    const res = await fetch(`http://${IP}:${PORT}/${endpoint}`, {
-      method: "POST",
-      headers: headers,
-      body: message,
-    });
+  const init: RequestInit = {
+    method: method,
+    headers: headers,
+  };
+  if (data) init["body"] = JSON.stringify(data);
 
-    const text = await res.text();
-    return text;
+  console.log(init);
+
+  try {
+    const res = await fetch(`http://${IP}:${PORT}/${endpoint}`, init);
+
+    if (res.status === 403) await removeStorage("token");
+
+    return res;
   } catch {
-    return "";
+    return null;
   }
 }

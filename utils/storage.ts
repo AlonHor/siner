@@ -11,5 +11,5 @@ export async function getStorage(key: string): Promise<string | null> {
 }
 
 export async function removeStorage(key: string) {
-  await localStorage.removeItem(key);
+  await storage.removeItem(key);
 }

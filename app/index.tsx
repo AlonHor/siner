@@ -1,5 +1,9 @@
 import "@/styles/global.css";
 
+import Login from "@/app/components/Login";
+import SegmentButton from "@/app/components/SegmentButton";
+import StatusDot from "@/app/components/StatusDot";
+import TicTacToe, { TicTacToeHandle } from "@/app/games/tictactoe/TicTacToe";
 import { useComms } from "@/hooks/useComms";
 import {
   CARRIER_BASE_FREQUENCY,
@@ -16,15 +20,15 @@ import {
 import { decode } from "@/utils/numberConversion";
 import { getStorage } from "@/utils/storage";
 import React, { useEffect, useRef, useState } from "react";
-import { Button, LogBox, Text, View } from "react-native";
+import { LogBox, Pressable, ScrollView, Text, View } from "react-native";
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
-import LoadingIcon from "./LoadingIcon";
-import Login from "./components/Login";
-import TicTacToe, { TicTacToeHandle } from "./games/TicTacToe";
+import Profile from "./components/Profile";
 
 LogBox.ignoreLogs(["Open debugger to view warnings.", "has been deprecated"]);
 
@@ -37,34 +41,31 @@ export default function Index() {
   const [loggedInState, setLoggedInState] = useState<"load" | "yes" | "no">(
     "load",
   );
+  const [showProfile, setShowProfile] = useState(false);
 
   const ticTacToeRef = useRef<TicTacToeHandle>(null);
-
   const gameRefs: React.RefObject<any | null>[] = [ticTacToeRef];
-
   const gameHistoryRef = useRef<Game[]>([]);
+
+  // Mount animation
+  const mountOpacity = useSharedValue(0);
+  const mountY = useSharedValue(24);
 
   function onMessage(message: string) {
     console.log(`H: message received: '${message}'`);
-    // ToastAndroid.show(message, ToastAndroid.SHORT);
-
-    gameRefs.forEach((gr) => {
-      gr.current?.onMessage(message);
-    });
+    gameRefs.forEach((gr) => gr.current?.onMessage(message));
   }
 
   async function onGameFinish(gameType: GameType, outcome: GameOutcome) {
     await addGameHistory(gameHistoryRef, {
-      gameType: gameType,
-      outcome: outcome,
+      gameType,
+      outcome,
       playedAt: new Date(Date.now()),
     });
   }
 
   function onGiveUp() {
-    gameRefs.forEach((gr) => {
-      gr.current?.onGiveUp();
-    });
+    gameRefs.forEach((gr) => gr.current?.onGiveUp());
   }
 
   const {
@@ -78,256 +79,292 @@ export default function Index() {
     channelFactor,
   } = useComms({
     onDataBufferChange: setDataBuffer,
-    onMessage: onMessage,
-    onGiveUp: onGiveUp,
+    onMessage,
+    onGiveUp,
   });
 
   useEffect(() => {
     (async () => {
       await loadGameHistory(gameHistoryRef);
-      console.log(
-        `games history loaded: ${JSON.stringify(gameHistoryRef.current)}`,
-      );
     })();
-
     (async () => {
       const token = await getStorage("token");
-      await new Promise((r) => setTimeout(r, 5000));
-      if (token === null) setLoggedInState("no");
-      else setLoggedInState("yes");
-      console.log("login data loaded");
+      setLoggedInState(token === null ? "no" : "yes");
     })();
   }, []);
+
+  useEffect(() => {
+    if (loggedInState === "yes") {
+      mountOpacity.value = withTiming(1, {
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+      });
+      mountY.value = withSpring(0, { damping: 18, stiffness: 120 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedInState]);
 
   useEffect(() => {
     changeChannel(selectedChannel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChannel]);
 
-  const left = useSharedValue(0);
+  // Frequency bar
+  const freqLeft = useSharedValue(200);
 
   useEffect(() => {
-    const newLeftValue =
+    const newLeft =
       ((TOP_BASE_FREQUENCY + channelFactor - (isSyncing ? (freq ?? 0) : 0)) /
         (TOP_BASE_FREQUENCY - CARRIER_BASE_FREQUENCY)) *
       100;
 
-    if (!isSyncing || !freq) left.value = 200;
-    else if (left.value === 200) left.value = newLeftValue;
-    else left.value = withTiming(newLeftValue, { duration: PLAY_INTERVAL });
-  }, [channelFactor, freq, isSyncing, left]);
+    if (!isSyncing || !freq) freqLeft.value = 200;
+    else if (freqLeft.value === 200) freqLeft.value = newLeft;
+    else freqLeft.value = withTiming(newLeft, { duration: PLAY_INTERVAL });
+  }, [channelFactor, freq, isSyncing, freqLeft]);
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    left: `${left.value}%`,
+  const freqBarStyle = useAnimatedStyle(() => ({
+    left: `${freqLeft.value}%`,
   }));
 
-  return (
-    <>
-      {loggedInState === "yes" ? (
+  const mountStyle = useAnimatedStyle(() => ({
+    opacity: mountOpacity.value,
+    transform: [{ translateY: mountY.value }],
+  }));
+
+  const statusLabel = isTransmitting
+    ? "Sending"
+    : isMidSequence
+      ? "Receiving"
+      : isSyncing
+        ? "Awaiting Signal"
+        : "In Sync";
+
+  const statusColor = isTransmitting
+    ? "#22c55e"
+    : isMidSequence
+      ? "#eab308"
+      : isSyncing
+        ? "#6366f1"
+        : "#3f3f46";
+
+  // Loading screen
+  if (loggedInState === "load") {
+    return (
+      <View className="flex-1 bg-[#08080f] items-center justify-center">
         <View
+          className="w-14 h-14 rounded-2xl bg-indigo-600 items-center justify-center mb-4"
           style={{
-            flex: 1,
-            marginTop: 20,
-            justifyContent: "flex-start",
-            alignItems: "center",
+            shadowColor: "#6366f1",
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.5,
+            shadowRadius: 16,
+            elevation: 10,
           }}
         >
-          <View style={{ flexDirection: "row", gap: 10, marginVertical: 10 }}>
-            <View
-              style={{
-                backgroundColor:
-                  selectedChannel === 0 ? "black" : "transparent",
-                padding: 5,
-              }}
-            >
-              <Button title="0" onPress={() => setSelectedChannel(0)} />
-            </View>
-            <View
-              style={{
-                backgroundColor:
-                  selectedChannel === 1 ? "black" : "transparent",
-                padding: 5,
-              }}
-            >
-              <Button title="1" onPress={() => setSelectedChannel(1)} />
-            </View>
-            <View
-              style={{
-                backgroundColor:
-                  selectedChannel === 2 ? "black" : "transparent",
-                padding: 5,
-              }}
-            >
-              <Button title="2" onPress={() => setSelectedChannel(2)} />
-            </View>
-            <View
-              style={{
-                backgroundColor:
-                  selectedChannel === 3 ? "black" : "transparent",
-                padding: 5,
-              }}
-            >
-              <Button title="3" onPress={() => setSelectedChannel(3)} />
-            </View>
-            <View
-              style={{
-                backgroundColor:
-                  selectedChannel === 4 ? "black" : "transparent",
-                padding: 5,
-              }}
-            >
-              <Button title="4" onPress={() => setSelectedChannel(4)} />
-            </View>
-          </View>
-          <View
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              gap: 5,
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: side === "x" ? "black" : "transparent",
-                padding: 5,
-              }}
-            >
-              <Button title="X" onPress={() => setSide("x")} />
-            </View>
-            <View
-              style={{
-                backgroundColor: side === "o" ? "black" : "transparent",
-                padding: 5,
-              }}
-            >
-              <Button title="O" onPress={() => setSide("o")} />
-            </View>
-          </View>
-          <View
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              gap: 5,
-            }}
-          >
-            <LoadingIcon isLoading={isSyncing} text="S" color="#2563eb" />
-          </View>
-          <Text>&nbsp;</Text>
-          {DEBUG && (
-            <>
-              <Text>
-                {"\n"}Ch: {selectedChannel}, Freq: {freq}
+          <View className="w-5 h-5 rounded-md bg-white/90" />
+        </View>
+        <Text className="text-zinc-500 text-sm tracking-widest uppercase">
+          Loading
+        </Text>
+      </View>
+    );
+  }
+
+  // Login screen
+  if (loggedInState === "no") {
+    return <Login setLoggedInState={setLoggedInState} />;
+  }
+
+  // Main screen
+  return (
+    <View className="flex-1 bg-[#08080f]">
+      <Animated.View style={mountStyle} className="flex-1">
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-5 pt-14 pb-10 gap-4"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View className="flex-row items-center justify-between mb-2">
+            <View>
+              <Text className="text-white text-2xl font-bold tracking-tight">
+                Siner
               </Text>
-              <Text>{"\n"}Text:</Text>
-              <Text>
-                {'"' +
-                  dataBuffer
-                    .slice(0, -1)
-                    .map((n) => String.fromCharCode(decode(n)))
-                    .join("") +
-                  '"\n'}
+              <Text className="text-zinc-500 text-xs tracking-widest uppercase mt-0.5">
+                Panel
               </Text>
-              <Text>Data:</Text>
-              <Text style={{ marginHorizontal: 30 }}>
-                {"[" + dataBuffer.join(", ") + "]\n"}
-              </Text>
-              <Text>Buffer:</Text>
-              <Text>
-                {"{ " +
-                  bitBuffer.map((b) => (b % 1000) / 50).join(".") +
-                  " }\n"}
-              </Text>
-            </>
-          )}
-          <Text>
-            {"\n"}
-            {isTransmitting
-              ? "Sending..."
-              : isMidSequence
-                ? "Receiving..."
-                : isSyncing
-                  ? "Awaiting Signal..."
-                  : "In Sync"}
-          </Text>
-          <TicTacToe
-            side={side}
-            sendMessage={sendMessage}
-            onGameFinish={onGameFinish}
-            ref={ticTacToeRef}
-          />
-          <View style={{ marginTop: 20, width: "90%" }}>
-            <Text style={{ fontWeight: "bold", marginBottom: 10 }}>
-              Frequency Visualization
-            </Text>
-            <View
-              style={{
-                height: 50,
-                backgroundColor: "#f0f0f0",
-                borderRadius: 8,
-              }}
-            >
-              <View
-                style={{
-                  position: "relative",
-                  height: "100%",
-                  backgroundColor: "#ccc",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                }}
-              >
-                <Animated.View
-                  style={[
-                    {
-                      position: "absolute",
-                      top: 0,
-                      bottom: 0,
-                      width: 16,
-                      borderRadius: 6,
-                      borderColor: "black",
-                      borderWidth: 1,
-                      backgroundColor: isTransmitting
-                        ? "#2563ebaa"
-                        : isMidSequence
-                          ? "#d44a"
-                          : "#777a",
-                    },
-                    animatedStyle,
-                  ]}
+            </View>
+            <View className="flex-row items-center gap-2">
+              <View className="flex-row items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2">
+                <StatusDot
+                  active={isSyncing || isTransmitting || isMidSequence}
+                  color={statusColor}
                 />
-                <Text style={{ padding: 10, color: "#999", fontSize: 12 }}>
-                  {(isSyncing ? (freq ?? 0) : 0) / 1000} kHz{"\n"}
+                <Text className="text-zinc-400 text-xs font-medium">
+                  {statusLabel}
                 </Text>
               </View>
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: 5,
-                }}
+              {/* Profile button */}
+              <Pressable
+                onPress={() => setShowProfile(true)}
+                className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 items-center justify-center"
               >
-                <LoadingIcon
-                  isLoading={isTransmitting}
-                  text="T"
-                  color="#16a34a"
-                />
-                <LoadingIcon isLoading={isMidSequence} text="R" color="#aa4" />
-              </View>
+                <Text className="text-zinc-400 text-base">👤</Text>
+              </Pressable>
             </View>
           </View>
-        </View>
-      ) : loggedInState === "no" ? (
-        <Login />
-      ) : (
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Text>Loading...</Text>
-        </View>
-      )}
-    </>
+
+          {/* Channel selector */}
+          <View className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4">
+            <Text className="text-zinc-400 text-[11px] font-semibold uppercase tracking-[0.12em] mb-3">
+              Channel
+            </Text>
+            <View className="flex-row gap-2">
+              {[0, 1, 2, 3, 4].map((ch) => (
+                <SegmentButton
+                  key={ch}
+                  label={String(ch)}
+                  active={selectedChannel === ch}
+                  onPress={() => setSelectedChannel(ch)}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Side selector */}
+          <View className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4">
+            <Text className="text-zinc-400 text-[11px] font-semibold uppercase tracking-[0.12em] mb-3">
+              Play as
+            </Text>
+            <View className="flex-row gap-2">
+              {(["x", "o"] as const).map((s) => (
+                <SegmentButton
+                  key={s}
+                  label={s.toUpperCase()}
+                  active={side === s}
+                  onPress={() => setSide(s)}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Frequency visualizer */}
+          <View className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-zinc-400 text-[11px] font-semibold uppercase tracking-[0.12em]">
+                Frequency
+              </Text>
+              <View className="flex-row items-center gap-3">
+                <View className="flex-row items-center gap-1.5">
+                  <StatusDot active={isTransmitting} color="#22c55e" />
+                  <Text className="text-zinc-500 text-[10px] uppercase tracking-wider">
+                    TX
+                  </Text>
+                </View>
+                <View className="flex-row items-center gap-1.5">
+                  <StatusDot active={isMidSequence} color="#eab308" />
+                  <Text className="text-zinc-500 text-[10px] uppercase tracking-wider">
+                    RX
+                  </Text>
+                </View>
+                <View className="flex-row items-center gap-1.5">
+                  <StatusDot active={isSyncing} color="#6366f1" />
+                  <Text className="text-zinc-500 text-[10px] uppercase tracking-wider">
+                    SYNC
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Bar */}
+            <View
+              className="h-10 rounded-xl overflow-hidden bg-zinc-800/80"
+              style={{ position: "relative" }}
+            >
+              <Animated.View
+                style={[
+                  freqBarStyle,
+                  {
+                    position: "absolute",
+                    top: 4,
+                    bottom: 4,
+                    width: 14,
+                    borderRadius: 5,
+                    backgroundColor: isTransmitting
+                      ? "#22c55ecc"
+                      : isMidSequence
+                        ? "#eab308cc"
+                        : "#6366f1cc",
+                    shadowColor: isTransmitting
+                      ? "#22c55e"
+                      : isMidSequence
+                        ? "#eab308"
+                        : "#6366f1",
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.8,
+                    shadowRadius: 6,
+                  },
+                ]}
+              />
+              <Text
+                className="absolute right-2.5 top-0 bottom-0 text-zinc-600 text-[10px]"
+                style={{ lineHeight: 40 }}
+              >
+                {(isSyncing ? (freq ?? 0) : 0) / 1000} kHz
+              </Text>
+            </View>
+          </View>
+
+          {/* Debug panel */}
+          {DEBUG && (
+            <View className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4 gap-1">
+              <Text className="text-zinc-400 text-[11px] font-semibold uppercase tracking-[0.12em] mb-2">
+                Debug
+              </Text>
+              <Text className="text-zinc-500 text-xs font-mono">
+                Ch: {selectedChannel} Freq: {freq}
+              </Text>
+              <Text className="text-zinc-500 text-xs font-mono">
+                {'Text: "'}
+                {dataBuffer
+                  .slice(0, -1)
+                  .map((n) => String.fromCharCode(decode(n)))
+                  .join("")}
+                {'"'}
+              </Text>
+              <Text className="text-zinc-500 text-xs font-mono">
+                Data: [{dataBuffer.join(", ")}]
+              </Text>
+              <Text className="text-zinc-500 text-xs font-mono">
+                Buf:{" "}
+                {"{ " + bitBuffer.map((b) => (b % 1000) / 50).join(".") + " }"}
+              </Text>
+            </View>
+          )}
+
+          {/* Game */}
+          <View className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4">
+            <Text className="text-zinc-400 text-[11px] font-semibold uppercase tracking-[0.12em] mb-4">
+              Tic Tac Toe
+            </Text>
+            <TicTacToe
+              side={side}
+              sendMessage={sendMessage}
+              onGameFinish={onGameFinish}
+              ref={ticTacToeRef}
+            />
+          </View>
+        </ScrollView>
+      </Animated.View>
+
+      {/* Profile overlay */}
+      <Profile
+        visible={showProfile}
+        onClose={() => setShowProfile(false)}
+        setLoggedInState={setLoggedInState}
+        gameHistoryRef={gameHistoryRef}
+      />
+    </View>
   );
 }
