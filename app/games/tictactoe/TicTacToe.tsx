@@ -6,7 +6,7 @@ import React, {
   useImperativeHandle,
   useState,
 } from "react";
-import { Pressable, Text, ToastAndroid, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 export type TicTacToeHandle = {
   onMessage: (message: string) => void;
@@ -60,21 +60,19 @@ const TicTacToe = forwardRef<
       setWinningLine(result.line);
       if (result.winner === side) {
         setStatusMsg("You won! 🎉");
-        ToastAndroid.show("you won!", ToastAndroid.SHORT);
         onGameFinish(GAME_TYPE, "win");
       } else {
         setStatusMsg("You lost.");
-        ToastAndroid.show("you lost!", ToastAndroid.SHORT);
         onGameFinish(GAME_TYPE, "lose");
       }
       return;
     }
     if (board.filter((b) => b === "").length === 0) {
       setStatusMsg("It's a draw.");
-      ToastAndroid.show("it's a draw!", ToastAndroid.SHORT);
       onGameFinish(GAME_TYPE, "draw");
     }
-  }, [board, side, onGameFinish]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board, side]);
 
   const isMyTurn =
     (board.filter((b) => b !== "").length % 2 === 0 ? "x" : "o") === side;

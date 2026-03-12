@@ -19,7 +19,7 @@ import {
 } from "@/utils/gamesHistory";
 import { decode } from "@/utils/numberConversion";
 import { getStorage } from "@/utils/storage";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { LogBox, Pressable, ScrollView, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -56,13 +56,16 @@ export default function Index() {
     gameRefs.forEach((gr) => gr.current?.onMessage(message));
   }
 
-  async function onGameFinish(gameType: GameType, outcome: GameOutcome) {
-    await addGameHistory(gameHistoryRef, {
-      gameType,
-      outcome,
-      playedAt: new Date(Date.now()),
-    });
-  }
+  const onGameFinish = useCallback(
+    async (gameType: GameType, outcome: GameOutcome) => {
+      await addGameHistory(gameHistoryRef, {
+        gameType,
+        outcome,
+        playedAt: new Date(Date.now()),
+      });
+    },
+    [],
+  );
 
   function onGiveUp() {
     gameRefs.forEach((gr) => gr.current?.onGiveUp());

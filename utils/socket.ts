@@ -1,3 +1,4 @@
+import { ToastAndroid } from "react-native";
 import { getStorage, removeStorage } from "./storage";
 
 const IP = "192.168.1.122";
@@ -6,7 +7,7 @@ const PORT = 9000;
 export async function sendSocket(
   endpoint: string,
   method: string,
-  data: object | undefined,
+  data?: object,
 ): Promise<Response | null> {
   const token = await getStorage("token");
 
@@ -27,7 +28,8 @@ export async function sendSocket(
     if (res.status === 403) await removeStorage("token");
 
     return res;
-  } catch {
+  } catch (err: any) {
+    ToastAndroid.show(err.toString(), ToastAndroid.SHORT);
     return null;
   }
 }

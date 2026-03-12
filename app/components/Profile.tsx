@@ -48,7 +48,7 @@ export default function Profile({
       setGames(null);
       setGamesError(null);
       setLoadingGames(true);
-      sendSocket("games", "GET", undefined)
+      sendSocket("games", "GET")
         .then(async (res) => {
           if (!res) {
             setGamesError("No response from server.");
