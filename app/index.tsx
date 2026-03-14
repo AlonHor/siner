@@ -21,7 +21,6 @@ import {
 } from "@/utils/gamesHistory";
 import { decode } from "@/utils/numberConversion";
 import { getStorage } from "@/utils/storage";
-import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { LogBox, Pressable, ScrollView, Text, View } from "react-native";
 import Animated, {
@@ -34,7 +33,7 @@ import Animated, {
 import Profile from "./components/Profile";
 
 LogBox.ignoreLogs(["Open debugger to view warnings.", "has been deprecated"]);
-SplashScreen.preventAutoHideAsync();
+// SplashScreen.preventAutoHideAsync();
 
 const DEBUG = false;
 

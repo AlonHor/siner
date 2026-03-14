@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.anonymous.siner'
+    namespace 'com.alonhoresh.siner'
     defaultConfig {
-        applicationId 'com.anonymous.siner'
+        applicationId 'com.alonhoresh.siner'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -1,4 +1,4 @@
-package com.anonymous.siner
+package com.alonhoresh.siner
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

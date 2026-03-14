@@ -1,4 +1,4 @@
-package com.anonymous.siner
+package com.alonhoresh.siner
 
 import android.media.*
 import com.facebook.react.bridge.*

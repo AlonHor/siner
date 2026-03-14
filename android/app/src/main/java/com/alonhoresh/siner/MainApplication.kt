@@ -1,6 +1,6 @@
-package com.anonymous.siner
+package com.alonhoresh.siner
 
-import com.anonymous.siner.UltrasonicPackage
+import com.alonhoresh.siner.UltrasonicPackage
 
 import android.app.Application
 import android.content.res.Configuration
