@@ -2,6 +2,7 @@ import { sendSocket } from "@/utils/socket";
 import { setStorage } from "@/utils/storage";
 import React, { useEffect, useState } from "react";
 import {
+  Keyboard,
   Pressable,
   Text,
   TextInput,
@@ -25,7 +26,9 @@ import Animated, {
 export default function Login({
   setLoggedInState,
 }: {
-  setLoggedInState: React.Dispatch<React.SetStateAction<"load" | "yes" | "no">>;
+  setLoggedInState: React.Dispatch<
+    React.SetStateAction<"load" | "yes" | "no" | "guest">
+  >;
 }) {
   const [isLogin, setIsLogin] = useState(true);
   // pendingIsLogin holds the value that should show AFTER the fade-out completes
@@ -45,7 +48,7 @@ export default function Login({
   const logoScale = useSharedValue(1);
   const logoGlow = useSharedValue(0);
 
-  // Toggle — single value drives the whole card fade+slide
+  // Toggle - single value drives the whole card fade+slide
   const toggleOpacity = useSharedValue(1);
   const toggleY = useSharedValue(0);
 
@@ -62,7 +65,7 @@ export default function Login({
   // Success animation
   const successProgress = useSharedValue(0);
 
-  // Keyboard lift — animates the whole container up when keyboard appears
+  // Keyboard lift - animates the whole container up when keyboard appears
   const keyboard = useAnimatedKeyboard();
 
   useEffect(() => {
@@ -94,6 +97,9 @@ export default function Login({
   }, []);
 
   const triggerSuccess = (onDone: () => void) => {
+    // Dismiss keyboard before the animation plays
+    Keyboard.dismiss();
+
     // Stop the glow pulse and fade form out simultaneously
     logoGlow.value = withTiming(0, { duration: 200 });
     toggleOpacity.value = withTiming(0, {
@@ -123,7 +129,7 @@ export default function Login({
                   { duration: 350, easing: Easing.in(Easing.cubic) },
                   () => {
                     "worklet";
-                    // Can't call setState from worklet — use a short timeout on JS side
+                    // Can't call setState from worklet - use a short timeout on JS side
                   },
                 ),
               );
@@ -286,7 +292,7 @@ export default function Login({
       <Animated.View style={mountStyle}>
         {/* Keyboard lift wrapper */}
         <Animated.View style={keyboardLiftStyle}>
-          {/* Logo — outside toggle so it doesn't flicker */}
+          {/* Logo - outside toggle so it doesn't flicker */}
           <View className="items-center mb-6">
             <Animated.View
               style={[
@@ -431,6 +437,17 @@ export default function Login({
                   </Text>
                 </Pressable>
               </Animated.View>
+
+              {/* Guest */}
+              <TouchableOpacity
+                onPress={() => triggerSuccess(() => setLoggedInState("guest"))}
+                activeOpacity={0.7}
+                className="rounded-xl py-[13px] items-center bg-zinc-900 border border-zinc-700/60"
+              >
+                <Text className="text-zinc-400 text-[15px] font-semibold">
+                  Continue as guest
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Toggle */}

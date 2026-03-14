@@ -16,9 +16,12 @@ import {
   GameOutcome,
   GameType,
   loadGameHistory,
+  syncLocalGameHistory,
+  syncNetworkGameHistory,
 } from "@/utils/gamesHistory";
 import { decode } from "@/utils/numberConversion";
 import { getStorage } from "@/utils/storage";
+import * as SplashScreen from "expo-splash-screen";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { LogBox, Pressable, ScrollView, Text, View } from "react-native";
 import Animated, {
@@ -31,6 +34,7 @@ import Animated, {
 import Profile from "./components/Profile";
 
 LogBox.ignoreLogs(["Open debugger to view warnings.", "has been deprecated"]);
+SplashScreen.preventAutoHideAsync();
 
 const DEBUG = false;
 
@@ -38,9 +42,9 @@ export default function Index() {
   const [dataBuffer, setDataBuffer] = useState<number[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<number>(0);
   const [side, setSide] = useState<"x" | "o">("x");
-  const [loggedInState, setLoggedInState] = useState<"load" | "yes" | "no">(
-    "load",
-  );
+  const [loggedInState, setLoggedInState] = useState<
+    "load" | "yes" | "no" | "guest"
+  >("load");
   const [showProfile, setShowProfile] = useState(false);
 
   const ticTacToeRef = useRef<TicTacToeHandle>(null);
@@ -58,13 +62,14 @@ export default function Index() {
 
   const onGameFinish = useCallback(
     async (gameType: GameType, outcome: GameOutcome) => {
+      if (loggedInState === "guest") return;
       await addGameHistory(gameHistoryRef, {
         gameType,
         outcome,
         playedAt: new Date(Date.now()),
       });
     },
-    [],
+    [loggedInState],
   );
 
   function onGiveUp() {
@@ -89,6 +94,8 @@ export default function Index() {
   useEffect(() => {
     (async () => {
       await loadGameHistory(gameHistoryRef);
+      await syncLocalGameHistory(gameHistoryRef);
+      await syncNetworkGameHistory(gameHistoryRef);
     })();
     (async () => {
       const token = await getStorage("token");
@@ -97,7 +104,7 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
-    if (loggedInState === "yes") {
+    if (loggedInState === "yes" || loggedInState === "guest") {
       mountOpacity.value = withTiming(1, {
         duration: 600,
         easing: Easing.out(Easing.cubic),
@@ -153,31 +160,15 @@ export default function Index() {
 
   // Loading screen
   if (loggedInState === "load") {
-    return (
-      <View className="flex-1 bg-[#08080f] items-center justify-center">
-        <View
-          className="w-14 h-14 rounded-2xl bg-indigo-600 items-center justify-center mb-4"
-          style={{
-            shadowColor: "#6366f1",
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.5,
-            shadowRadius: 16,
-            elevation: 10,
-          }}
-        >
-          <View className="w-5 h-5 rounded-md bg-white/90" />
-        </View>
-        <Text className="text-zinc-500 text-sm tracking-widest uppercase">
-          Loading
-        </Text>
-      </View>
-    );
+    return null;
   }
 
   // Login screen
   if (loggedInState === "no") {
     return <Login setLoggedInState={setLoggedInState} />;
   }
+
+  const isGuest = loggedInState === "guest";
 
   // Main screen
   return (
@@ -208,13 +199,29 @@ export default function Index() {
                   {statusLabel}
                 </Text>
               </View>
-              {/* Profile button */}
-              <Pressable
-                onPress={() => setShowProfile(true)}
-                className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 items-center justify-center"
-              >
-                <Text className="text-zinc-400 text-base">👤</Text>
-              </Pressable>
+              {/* Profile / Login button */}
+              {isGuest ? (
+                <Pressable
+                  onPress={() => setLoggedInState("no")}
+                  className="w-9 h-9 rounded-xl bg-indigo-950/80 border border-indigo-800/60 items-center justify-center"
+                  style={{
+                    shadowColor: "#6366f1",
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 6,
+                    elevation: 4,
+                  }}
+                >
+                  <Text className="text-indigo-400 text-base">🔑</Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => setShowProfile(true)}
+                  className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 items-center justify-center"
+                >
+                  <Text className="text-zinc-400 text-base">👤</Text>
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -362,12 +369,14 @@ export default function Index() {
       </Animated.View>
 
       {/* Profile overlay */}
-      <Profile
-        visible={showProfile}
-        onClose={() => setShowProfile(false)}
-        setLoggedInState={setLoggedInState}
-        gameHistoryRef={gameHistoryRef}
-      />
+      {!isGuest && (
+        <Profile
+          visible={showProfile}
+          onClose={() => setShowProfile(false)}
+          setLoggedInState={setLoggedInState}
+          gameHistoryRef={gameHistoryRef}
+        />
+      )}
     </View>
   );
 }

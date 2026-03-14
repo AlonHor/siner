@@ -1,4 +1,3 @@
-import { ToastAndroid } from "react-native";
 import { getStorage, removeStorage } from "./storage";
 
 const IP = "192.168.1.122";
@@ -28,8 +27,7 @@ export async function sendSocket(
     if (res.status === 403) await removeStorage("token");
 
     return res;
-  } catch (err: any) {
-    ToastAndroid.show(err.toString(), ToastAndroid.SHORT);
+  } catch {
     return null;
   }
 }

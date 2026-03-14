@@ -2,7 +2,13 @@ import { Game } from "@/utils/gamesHistory";
 import { sendSocket } from "@/utils/socket";
 import { getStorage, removeStorage } from "@/utils/storage";
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -28,13 +34,17 @@ export default function Profile({
 }: {
   visible: boolean;
   onClose: () => void;
-  setLoggedInState: React.Dispatch<React.SetStateAction<"load" | "yes" | "no">>;
+  setLoggedInState: React.Dispatch<
+    React.SetStateAction<"load" | "yes" | "no" | "guest">
+  >;
   gameHistoryRef: React.RefObject<Game[]>;
 }) {
   const [email, setEmail] = useState<string | null>(null);
   const [games, setGames] = useState<RemoteGame[] | null>(null);
   const [gamesError, setGamesError] = useState<string | null>(null);
   const [loadingGames, setLoadingGames] = useState(false);
+
+  const { height: screenHeight } = useWindowDimensions();
 
   // Slide-up panel animation
   const translateY = useSharedValue(800);
@@ -95,7 +105,9 @@ export default function Profile({
           );
           setGames(merged);
         })
-        .catch(() => setGamesError("Connection failed."))
+        .catch((err: any) =>
+          setGamesError(`Connection failed: ${err.toString()}`),
+        )
         .finally(() => setLoadingGames(false));
     } else {
       backdropOpacity.value = withTiming(0, { duration: 220 });
@@ -138,9 +150,8 @@ export default function Profile({
 
       {/* Panel */}
       <Animated.View
-        style={panelStyle}
+        style={[panelStyle, { maxHeight: screenHeight * 0.75 }]}
         className="absolute bottom-0 left-0 right-0 bg-[#0d0d18] border-t border-zinc-800/80 rounded-t-3xl"
-        // min height via paddingBottom
       >
         {/* Handle */}
         <View className="items-center pt-3 pb-1">
