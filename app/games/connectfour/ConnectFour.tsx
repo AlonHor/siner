@@ -123,15 +123,13 @@ const ConnectFour = forwardRef<
     setBoard(newBoard);
     setCurrentTurn(side === 1 ? 2 : 1);
     setLastCol(col);
-    // message format: "c{col}" prefixed with player "1" or "2"
-    sendMessage(`c${side}${col}`);
+    sendMessage(`${side}${col}`);
   }
 
   useImperativeHandle(ref, () => ({
     onMessage(message: string) {
-      if (message[0] !== "c") return;
-      const player = Number(message[1]) as 1 | 2;
-      const col = Number(message[2]);
+      const player = Number(message[0]) as 1 | 2;
+      const col = Number(message[1]);
       if (isNaN(col) || col < 0 || col >= COLS) return;
       setBoard((b) => {
         const nb = dropInCol(b, col, player);
@@ -197,7 +195,7 @@ const ConnectFour = forwardRef<
                 style={{
                   width: CELL_SIZE,
                   height: CELL_SIZE,
-                  backgroundColor: "#1c1c30",
+                  backgroundColor: "#222225",
                   borderRadius: 999,
                   overflow: "hidden",
                 }}

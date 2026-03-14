@@ -6,7 +6,7 @@ import React, {
   useImperativeHandle,
   useState,
 } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 export type TicTacToeHandle = {
   onMessage: (message: string) => void;
@@ -85,7 +85,7 @@ const TicTacToe = forwardRef<
       nb[box] = side;
       return nb;
     });
-    sendMessage(`${side === "x" ? "a" : "b"}${box}`);
+    sendMessage(`${side === "x" ? "1" : "2"}${box}`);
     setLastMove(box);
   }
 
@@ -93,11 +93,11 @@ const TicTacToe = forwardRef<
     onMessage(message: string) {
       const s = message[0];
       const box = Number.parseInt(message[1]);
-      if (s !== "a" && s !== "b") return;
+      if (s !== "1" && s !== "2") return;
       setBoard((b) => {
         if (b[box] !== "") return b;
         const nb = [...b];
-        nb[box] = s === "a" ? "x" : "o";
+        nb[box] = s === "1" ? "x" : "o";
         return nb;
       });
     },
@@ -141,20 +141,7 @@ const TicTacToe = forwardRef<
             </>
           )}
         </View>
-        {statusMsg ? (
-          <Pressable
-            onPress={() => {
-              setBoard(Array(9).fill(""));
-              setWinningLine(null);
-              setStatusMsg("");
-            }}
-            className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700/60 items-center justify-center"
-          >
-            <Text style={{ fontSize: 14 }}>↺</Text>
-          </Pressable>
-        ) : (
-          <View className="w-7 h-7" />
-        )}
+        <View className="w-7 h-7" />
       </View>
 
       {/* Board - 3x3 absolute grid: cell=74px, gap=6px, padding=6px -> total=240 */}

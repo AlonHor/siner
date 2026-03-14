@@ -63,7 +63,7 @@ export default function Block({
   const cellStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     backgroundColor: `rgba(${
-      isWinning ? "99,102,241" : "28,28,48"
+      isWinning ? "99,102,241" : "34,34,37"
     },${interpolate(winGlow.value, [0, 1], [1, isWinning ? 0.35 : 1])})`,
   }));
 

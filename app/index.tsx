@@ -50,6 +50,7 @@ export default function Index() {
   const [selectedGame, setSelectedGame] = useState<"tictactoe" | "connectfour">(
     "tictactoe",
   );
+  const selectedGameRef = useRef<"tictactoe" | "connectfour">("tictactoe");
 
   const ticTacToeRef = useRef<TicTacToeHandle>(null);
   const connectFourRef = useRef<ConnectFourHandle>(null);
@@ -65,7 +66,19 @@ export default function Index() {
 
   function onMessage(message: string) {
     console.log(`H: message received: '${message}'`);
-    gameRefs.forEach((gr) => gr.current?.onMessage(message));
+
+    switch (selectedGameRef.current) {
+      case "tictactoe":
+        ticTacToeRef.current?.onMessage(message);
+        break;
+
+      case "connectfour":
+        connectFourRef.current?.onMessage(message);
+        break;
+
+      default:
+        break;
+    }
   }
 
   const onGameFinish = useCallback(
@@ -126,6 +139,10 @@ export default function Index() {
     changeChannel(selectedChannel);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChannel]);
+
+  useEffect(() => {
+    selectedGameRef.current = selectedGame;
+  }, [selectedGame]);
 
   // Frequency bar
   const freqLeft = useSharedValue(200);
