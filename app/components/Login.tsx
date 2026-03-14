@@ -425,7 +425,7 @@ export default function Login({
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: loading ? 0.1 : 0.5,
                     shadowRadius: 16,
-                    elevation: 10,
+                    elevation: loading ? 0 : 10,
                   }}
                 >
                   <Text className="text-white text-[15px] font-bold tracking-wide">

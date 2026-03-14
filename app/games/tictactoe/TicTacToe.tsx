@@ -121,20 +121,39 @@ const TicTacToe = forwardRef<
 
   return (
     <View className="items-center gap-4">
-      {/* Turn / status indicator */}
-      <View className="flex-row items-center gap-2 h-6">
-        {statusMsg ? (
-          <Text className="text-white text-sm font-semibold">{statusMsg}</Text>
-        ) : (
-          <>
-            <View
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: turnColor }}
-            />
-            <Text className="text-sm" style={{ color: turnColor }}>
-              {turnText}
+      {/* Turn / status + reset icon row */}
+      <View className="flex-row items-center justify-between w-full px-1">
+        <View className="w-7 h-7" />
+        <View className="flex-row items-center gap-2 h-6">
+          {statusMsg ? (
+            <Text className="text-white text-sm font-semibold">
+              {statusMsg}
             </Text>
-          </>
+          ) : (
+            <>
+              <View
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: turnColor }}
+              />
+              <Text className="text-sm" style={{ color: turnColor }}>
+                {turnText}
+              </Text>
+            </>
+          )}
+        </View>
+        {statusMsg ? (
+          <Pressable
+            onPress={() => {
+              setBoard(Array(9).fill(""));
+              setWinningLine(null);
+              setStatusMsg("");
+            }}
+            className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700/60 items-center justify-center"
+          >
+            <Text style={{ fontSize: 14 }}>↺</Text>
+          </Pressable>
+        ) : (
+          <View className="w-7 h-7" />
         )}
       </View>
 
@@ -177,21 +196,6 @@ const TicTacToe = forwardRef<
           );
         })}
       </View>
-
-      {/* Reset hint */}
-      {(winningLine || (!winningLine && board.some((b) => b !== ""))) &&
-        statusMsg && (
-          <Pressable
-            onPress={() => {
-              setBoard(Array(9).fill(""));
-              setWinningLine(null);
-              setStatusMsg("");
-            }}
-            className="mt-1"
-          >
-            <Text className="text-zinc-500 text-xs underline">Play again</Text>
-          </Pressable>
-        )}
     </View>
   );
 });

@@ -4,7 +4,7 @@ import { getStorage, setStorage } from "./storage";
 
 export type GameOutcome = "win" | "draw" | "lose";
 
-export type GameType = "TicTacToe";
+export type GameType = "TicTacToe" | "ConnectFour";
 
 export type Game = {
   gameType: GameType;

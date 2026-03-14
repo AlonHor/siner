@@ -1,3 +1,6 @@
+import GameTypeLabel from "@/app/components/GameTypeLabel";
+import OutcomeBadge from "@/app/components/OutcomeBadge";
+import { RemoteGame } from "@/app/components/Profile";
 import React, { useEffect } from "react";
 import { Text, View } from "react-native";
 import Animated, {
@@ -7,9 +10,6 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import GameTypeLabel from "./GameTypeLabel";
-import OutcomeBadge from "./OutcomeBadge";
-import { RemoteGame } from "./Profile";
 
 export default function GameRow({
   game,

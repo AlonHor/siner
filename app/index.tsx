@@ -3,6 +3,9 @@ import "@/styles/global.css";
 import Login from "@/app/components/Login";
 import SegmentButton from "@/app/components/SegmentButton";
 import StatusDot from "@/app/components/StatusDot";
+import ConnectFour, {
+  ConnectFourHandle,
+} from "@/app/games/connectfour/ConnectFour";
 import TicTacToe, { TicTacToeHandle } from "@/app/games/tictactoe/TicTacToe";
 import { useComms } from "@/hooks/useComms";
 import {
@@ -33,7 +36,6 @@ import Animated, {
 import Profile from "./components/Profile";
 
 LogBox.ignoreLogs(["Open debugger to view warnings.", "has been deprecated"]);
-// SplashScreen.preventAutoHideAsync();
 
 const DEBUG = false;
 
@@ -45,9 +47,16 @@ export default function Index() {
     "load" | "yes" | "no" | "guest"
   >("load");
   const [showProfile, setShowProfile] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<"tictactoe" | "connectfour">(
+    "tictactoe",
+  );
 
   const ticTacToeRef = useRef<TicTacToeHandle>(null);
-  const gameRefs: React.RefObject<any | null>[] = [ticTacToeRef];
+  const connectFourRef = useRef<ConnectFourHandle>(null);
+  const gameRefs: React.RefObject<any | null>[] = [
+    ticTacToeRef,
+    connectFourRef,
+  ];
   const gameHistoryRef = useRef<Game[]>([]);
 
   // Mount animation
@@ -247,12 +256,12 @@ export default function Index() {
               Play as
             </Text>
             <View className="flex-row gap-2">
-              {(["x", "o"] as const).map((s) => (
+              {(["1", "2"] as const).map((s) => (
                 <SegmentButton
                   key={s}
                   label={s.toUpperCase()}
-                  active={side === s}
-                  onPress={() => setSide(s)}
+                  active={(side === "x" ? "1" : "2") === s}
+                  onPress={() => setSide(s === "1" ? "x" : "o")}
                 />
               ))}
             </View>
@@ -352,17 +361,74 @@ export default function Index() {
             </View>
           )}
 
-          {/* Game */}
+          {/* Game picker + game */}
           <View className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-4">
-            <Text className="text-zinc-400 text-[11px] font-semibold uppercase tracking-[0.12em] mb-4">
-              Tic Tac Toe
-            </Text>
-            <TicTacToe
-              side={side}
-              sendMessage={sendMessage}
-              onGameFinish={onGameFinish}
-              ref={ticTacToeRef}
-            />
+            {/* Picker header */}
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-zinc-400 text-[11px] font-semibold uppercase tracking-[0.12em]">
+                Game
+              </Text>
+              <View className="flex-row gap-2">
+                <Pressable
+                  onPress={() => setSelectedGame("tictactoe")}
+                  className={`px-3 py-1.5 rounded-lg border ${selectedGame === "tictactoe" ? "bg-indigo-600 border-indigo-500" : "bg-zinc-800/80 border-zinc-700/60"}`}
+                  style={
+                    selectedGame === "tictactoe"
+                      ? {
+                          shadowColor: "#6366f1",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.4,
+                          shadowRadius: 6,
+                          elevation: 4,
+                        }
+                      : {}
+                  }
+                >
+                  <Text
+                    className={`text-xs font-semibold ${selectedGame === "tictactoe" ? "text-white" : "text-zinc-500"}`}
+                  >
+                    Tic Tac Toe
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setSelectedGame("connectfour")}
+                  className={`px-3 py-1.5 rounded-lg border ${selectedGame === "connectfour" ? "bg-indigo-600 border-indigo-500" : "bg-zinc-800/80 border-zinc-700/60"}`}
+                  style={
+                    selectedGame === "connectfour"
+                      ? {
+                          shadowColor: "#6366f1",
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.4,
+                          shadowRadius: 6,
+                          elevation: 4,
+                        }
+                      : {}
+                  }
+                >
+                  <Text
+                    className={`text-xs font-semibold ${selectedGame === "connectfour" ? "text-white" : "text-zinc-500"}`}
+                  >
+                    Connect Four
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            {selectedGame === "tictactoe" ? (
+              <TicTacToe
+                side={side}
+                sendMessage={sendMessage}
+                onGameFinish={onGameFinish}
+                ref={ticTacToeRef}
+              />
+            ) : (
+              <ConnectFour
+                side={side === "x" ? 1 : 2}
+                sendMessage={sendMessage}
+                onGameFinish={onGameFinish}
+                ref={connectFourRef}
+              />
+            )}
           </View>
         </ScrollView>
       </Animated.View>

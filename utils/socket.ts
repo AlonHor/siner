@@ -19,8 +19,6 @@ export async function sendSocket(
   };
   if (data) init["body"] = JSON.stringify(data);
 
-  console.log(init);
-
   try {
     const res = await fetch(`http://${IP}:${PORT}/${endpoint}`, init);
 
